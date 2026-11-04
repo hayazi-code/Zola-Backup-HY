@@ -9,7 +9,7 @@
  <link rel="preconnect" href="https://services5.arcgis.com">
  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
- <link rel="stylesheet" href="styles.css?v=4">
+ <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <header>
@@ -27,14 +27,14 @@
    <button id="goto-queens">Queens</button>
    <button id="goto-staten">Staten Island</button>
   </div>
-  <div class="map-key">
+  <div class="map-key" id="map-key" role="region" aria-label="Map legend"><div id="map-key-content">
    <strong>Zoning districts</strong>
    <div class="key-items">
     <span><i class="key-swatch" style="background:#f7d88c"></i> Residential</span>
     <span><i class="key-swatch" style="background:#eca3a6"></i> Commercial</span>
     <span><i class="key-swatch" style="background:#b9a0cd"></i> Manufacturing</span>
    </div>
-  </div>
+  </div></div>
  </div>
  <aside class="side-panel" aria-label="Search, zoning layers, and property information">
   <div class="search-block">
@@ -112,6 +112,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script defer src="layer-explorer.js?v=6"></script>
-<script defer src="app.js?v=4"></script>
+<script defer src="app.js?v=7"></script>
 </body>
 </html>
