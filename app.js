@@ -120,17 +120,19 @@ async function refreshLayer(key){
    if(batch.length<2000&&!data.exceededTransferLimit)break;
   }
   if(ac.signal.aborted)return;
-  group.clearLayers();group.addData({type:'FeatureCollection',features});
+  const visible=features.filter(f=>!window.ZOLA_VISIBLE_FEATURE||window.ZOLA_VISIBLE_FEATURE(key,f));
+  group.clearLayers();group.addData({type:'FeatureCollection',features:visible});
   if(key==='lots')group.setStyle(layerStyles.lots);
   bringHighlights();
   const clipped=features.length>=6000;
-  signalLight(key,clipped?'Zoom in for complete coverage':FORMAT.format(features.length)+' shown',clipped?'warn':'good');
+  signalLight(key,clipped?'Zoom in for complete coverage':FORMAT.format(visible.length)+' shown',clipped?'warn':'good');
  }catch(e){
   if(e.name==='AbortError')return;
   group.clearLayers();signalLight(key,'Unavailable','error');
   notice(titles[key]+' layer: '+e.message,'error');
  }
 }
+window.ZOLA_RELOAD_CORE=key=>{if(Object.hasOwn(URLS,key))refreshLayer(key)};
 function refreshMap(){
  clearTimeout(loadTimer);loadTimer=setTimeout(()=>{
   for(const key of Object.keys(URLS))refreshLayer(key);
