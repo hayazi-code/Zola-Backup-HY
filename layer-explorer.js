@@ -297,9 +297,9 @@ function filter(){
    n.hidden=Boolean(q)&&!self&&!childMatch;
    if(q&&!n.hidden){const child=n.querySelector(':scope > .catalog-children');if(child)child.hidden=false}
   }
-  const rows=group.querySelectorAll('.basemap-row,.aerial-year');
+  const rows=group.querySelectorAll('.basemap-row');
   if(rows.length){for(const r of rows)r.hidden=!!q&&!r.textContent.toLowerCase().includes(q)}
-  group.hidden=!!q&&![...group.querySelectorAll('.catalog-node,.basemap-row,.aerial-year')].some(n=>!n.hidden);
+  group.hidden=!!q&&![...group.querySelectorAll('.catalog-node,.basemap-row')].some(n=>!n.hidden);
   if(q&&!group.hidden)group.open=true;
  }
 }
