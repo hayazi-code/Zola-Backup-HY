@@ -350,7 +350,7 @@ async function loadBuildingFootprints(){
   if(ac.signal.aborted||token!==state.buildingToken||!state.overlays.buildings)return;
   state.buildingLayer.clearLayers();
   state.buildingLayer.addData({type:'FeatureCollection',features});
-  state.buildingLayer.bringToFront();
+  bringTransitForward();
   baseStatus(features.length.toLocaleString()+' NYC OTI building footprints shown'+(truncated?' · zoom in for complete coverage':''),truncated?'':'good');
  }catch(e){
   if(ac.signal.aborted||token!==state.buildingToken)return;
@@ -405,14 +405,16 @@ function syncTransitVisibility(){
  if(enabled)loadTransit();else transitStatus('Transit overlays off');
 }
 function bringTransitForward(){
+ if(state.buildingLayer&&state.map.hasLayer(state.buildingLayer))state.buildingLayer.bringToFront();
+ // Subway lines above building polygons, station markers above their lines.
  for(const kind of ['routes','stations']){
   const layer=state.transitLayers[kind];
   if(layer&&state.map.hasLayer(layer))layer.bringToFront();
  }
- if(state.buildingLayer&&state.map.hasLayer(state.buildingLayer))state.buildingLayer.bringToFront();
- // Keep parcel inspection highlights on top of lines and footprints.
+ // Keep parcel inspection highlights on top of thematic layers.
  window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS?.();
 }
+window.ZOLA_BRING_TRANSIT_FORWARD=bringTransitForward;
 async function loadTransit(){
  if(!state.overlays.transit)return;
  ensureTransitLayers();
