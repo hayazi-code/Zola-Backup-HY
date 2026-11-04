@@ -24,7 +24,7 @@ SITES=[
 ]
 BASE="https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/MAPPLUTO/FeatureServer/0/query"
 AERIAL="https://tiles.arcgis.com/tiles/yG5s3afENB5iO9fj/arcgis/rest/services/NYC_Orthos_2024/MapServer/tile"
-CARTO="https://basemaps.cartocdn.com/light_all"
+CARTO="https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile"
 MERC=20037508.342789244
 R=156543.03392804097
 DEST=Path("output"); DEST.mkdir(exist_ok=True)
@@ -65,7 +65,7 @@ def frame(geom, zoom, w,h):
 def tile(layer,z,tx,ty):
     key=(layer,z,tx,ty)
     if key in tile_cache:return tile_cache[key]
-    url=(AERIAL+f"/{z}/{ty}/{tx}" if layer=="aerial" else CARTO+f"/{z}/{tx}/{ty}.png")
+    url=(AERIAL+f"/{z}/{ty}/{tx}" if layer=="aerial" else CARTO+f"/{z}/{ty}/{tx}")
     try:
         r=net(url)
         im=Image.open(io.BytesIO(r.content)).convert("RGB")
