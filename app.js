@@ -345,7 +345,73 @@ function updateNetworkMetrics(){
  const m=api.stats;
  host.textContent=m.network+' network requests · '+m.cacheHits+' cache hits · '+m.retries+' retries · '+m.failures+' failed · '+api.cacheSize()+' cached responses · peak '+m.peakActive+'/'+api.config.concurrency+' concurrent';
 }
+// Location remains in the browser's memory. It is never placed in a URL or submitted to GIS services.
+// Geolocation is requested only after the user presses Locate me.
+const userLocation={watchId:null,marker:null,accuracy:null,point:null,firstFix:true};
+function updateLocateUI(active){
+ const button=DOM('locate-me'),label=DOM('locate-me-label'),center=DOM('recenter-me');
+ if(!button||!label)return;
+ button.setAttribute('aria-pressed',String(active));
+ button.setAttribute('aria-label',active?'Stop showing my location':'Show my current location on the map');
+ button.classList.toggle('is-active',active);
+ label.textContent=active?'Stop locating':'Locate me';
+ if(center)center.hidden=!(active&&userLocation.point);
+}
+function stopLocation(message){
+ if(userLocation.watchId!==null){
+  navigator.geolocation?.clearWatch(userLocation.watchId);
+  userLocation.watchId=null;
+ }
+ if(userLocation.marker){map.removeLayer(userLocation.marker);userLocation.marker=null}
+ if(userLocation.accuracy){map.removeLayer(userLocation.accuracy);userLocation.accuracy=null}
+ userLocation.point=null;userLocation.firstFix=true;
+ updateLocateUI(false);
+ if(message)notice(message,'info');
+}
+function onLocationFix(position){
+ const {latitude,longitude,accuracy}=position.coords;
+ if(!Number.isFinite(latitude)||!Number.isFinite(longitude))return;
+ const point=L.latLng(latitude,longitude);
+ userLocation.point=point;
+ const radius=Number.isFinite(accuracy)?Math.max(0,accuracy):0;
+ if(!userLocation.accuracy){
+  userLocation.accuracy=L.circle(point,{radius,color:'#2f7de1',weight:1,opacity:.42,fillColor:'#4c9fff',fillOpacity:.12,interactive:false}).addTo(map);
+ }else userLocation.accuracy.setLatLng(point).setRadius(radius);
+ if(!userLocation.marker){
+  userLocation.marker=L.marker(point,{icon:L.divIcon({className:'user-location-icon',html:'<span class="user-location-dot"></span>',iconSize:[24,24],iconAnchor:[12,12]}),keyboard:false,interactive:false,zIndexOffset:900}).addTo(map);
+ }else userLocation.marker.setLatLng(point);
+ userLocation.marker.bringToFront?.();
+ if(userLocation.firstFix){
+  userLocation.firstFix=false;
+  map.setView(point,Math.max(map.getZoom(),16));
+ }
+ updateLocateUI(true);
+ notice('Location shown (approximately ±'+Math.round(radius)+' m). Tap the center button to return to it.','good');
+}
+function onLocationError(error){
+ const reason=error.code===1?'Location permission denied. Enable location access for this site in your browser settings.':
+  error.code===2?'Your device could not determine its location.':
+  error.code===3?'Location request timed out. Try again.':
+  'Location could not be obtained.';
+ stopLocation();
+ notice(reason,'warn');
+}
+function toggleLocation(){
+ if(userLocation.watchId!==null){stopLocation('Location tracking stopped.');return}
+ if(!window.isSecureContext){notice('Location requires HTTPS or a secure browser context.','warn');return}
+ if(!navigator.geolocation){notice('This browser does not support location access.','warn');return}
+ userLocation.firstFix=true;
+ notice('Requesting permission to show your location…');
+ updateLocateUI(true);
+ try{
+  userLocation.watchId=navigator.geolocation.watchPosition(onLocationFix,onLocationError,{enableHighAccuracy:true,maximumAge:12000,timeout:20000});
+ }catch(e){
+  stopLocation();notice('Could not start location tracking: '+e.message,'error');
+ }
+}
 function bindControls(){
+ DOM('locate-me').onclick=toggleLocation;
+ DOM('recenter-me').onclick=()=>{if(userLocation.point)map.setView(userLocation.point,Math.max(16,map.getZoom()))};
  for(const key of Object.keys(flags)){const input=DOM('layer-'+key);if(input)input.onchange=onFlagsChange}
  DOM('search-button').onclick=runSearch;DOM('search').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}if(e.key==='Escape')DOM('suggestions').hidden=true};
  DOM('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(autocomplete,350)};
