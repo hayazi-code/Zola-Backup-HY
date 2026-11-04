@@ -163,6 +163,7 @@ function renderItem(item,depth,top){
    else if(item.available!==false){checkbox.checked?activate(item):deactivate(item)}}
   else{
    if(item.source&&item.available!==false){checkbox.checked?activate(item):deactivate(item)}
+   if(top.id==='zoning')syncZoningChildren();
    updateParentCheckState(top);if(top.core)window.ZOLA_RELOAD_CORE?.(top.core);
    else if(top.available!==false&&state.active.has(top.id))load(top);
   }
@@ -199,7 +200,7 @@ function makeTimeline(item){
  const labels=document.createElement('div');labels.className='timeline-dates';container.append(labels);
  const monthString=value=>{const n=Number(value);return String(1970+Math.floor(n/12))+'-'+String(n%12+1).padStart(2,'0')};
  const update=()=>{if(+left.value>+right.value){if(document.activeElement===left)right.value=left.value;else left.value=right.value}
-  labels.textContent=monthString(left.value)+' to '+monthString(right.value);
+  labels.innerHTML='<span>'+monthString(left.value)+'</span><span>'+monthString(right.value)+'</span>';
   window.ZOLA_ZMA_DATE_RANGE={start:monthString(left.value),end:monthString(right.value)};
   if(state.active.has(item.id))load(item);
  };
@@ -332,6 +333,15 @@ function optionalVisible(item,f){
  }
  return true;
 }
+function syncZoningChildren(){
+ const zoning=GROUPS[0].items.find(item=>item.id==='zoning');
+ const parks=zoning?.children?.find(item=>item.id==='parks');
+ if(!parks||!state.map)return;
+ const active=!!el('layer-zoning')?.checked&&!!el('sub-parks')?.checked;
+ if(active&&!state.active.has(parks.id))activate(parks);
+ if(!active&&state.active.has(parks.id))deactivate(parks);
+}
+window.ZOLA_SYNC_CHILDREN=syncZoningChildren;
 window.ZOLA_VISIBLE_FEATURE=visibleCore;
 function styleFor(item,f){
  let col=item.color||'#7e6a99';const geom=f.geometry?.type||'';
