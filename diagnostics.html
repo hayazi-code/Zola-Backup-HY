@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZoLa Backup HY | Live diagnostics</title><style>body{margin:0;font:14px system-ui;background:#f7f6fa;color:#302b36}header{padding:18px 24px;background:#502c76;color:#fff}main{max-width:800px;margin:35px auto;padding:0 15px}h1{margin:0;font-size:20px}p{line-height:1.6}button{border:0;border-radius:4px;padding:11px 16px;background:#563087;color:#fff;font:inherit;cursor:pointer}table{border-collapse:collapse;width:100%;margin:18px 0;background:#fff}td,th{border-bottom:1px solid #eee;padding:12px;text-align:left}th{background:#efebf4}.pass{color:#127447}.fail{color:#ae3434}.pending{color:#88631e}code{font-size:12px;overflow-wrap:anywhere}.note{padding:12px;background:#fff4e4}a{color:#563087}</style></head><body>
+<header><h1>ZoLa Backup HY · Live service diagnostics</h1></header><main>
+<p>This checks the actual public GIS and address-search services from your browser. A green check verifies a successful response, not zoning-data accuracy or legal status.</p>
+<button id="run">Run tests again</button> <a href="./">Return to map</a>
+<table><thead><tr><th>Test</th><th>Result</th><th>Detail</th></tr></thead><tbody id="tests"></tbody></table>
+<p id="totals"></p><p class="note">If a service fails, please share the exact error in this table. An offline-independent copy would need regularly refreshed local data snapshots instead of these live services.</p>
+<script>
+const ROOT='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/';
+const p=o=>new URLSearchParams(o).toString();
+const tests=[
+ {name:'MapPLUTO parcel attributes',url:ROOT+'MAPPLUTO/FeatureServer/0/query?'+p({f:'json',where:'BBL > 0',outFields:'BBL,Address,ZoneDist1,LotArea',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
+ {name:'Parcel geometry / GeoJSON',url:ROOT+'MAPPLUTO/FeatureServer/0/query?'+p({f:'geojson',where:'BBL > 0',outFields:'BBL,Address',outSR:4326,resultRecordCount:1}),check:j=>j.features?.[0]?.geometry?.coordinates?.length>0},
+ {name:'Zoning polygons / viewport query',url:ROOT+'nyzd/FeatureServer/0/query?'+p({f:'geojson',where:'1=1',outFields:'ZONEDIST',geometry:JSON.stringify({xmin:-73.96,ymin:40.67,xmax:-73.95,ymax:40.68,spatialReference:{wkid:4326}}),geometryType:'esriGeometryEnvelope',inSR:4326,outSR:4326,spatialRel:'esriSpatialRelIntersects',resultRecordCount:100}),check:j=>j.features?.length>0},
+ {name:'Commercial overlays',url:ROOT+'nyco/FeatureServer/0/query?'+p({f:'json',where:'1=1',outFields:'OVERLAY',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
+ {name:'Special purpose districts',url:ROOT+'nysp/FeatureServer/0/query?'+p({f:'json',where:'1=1',outFields:'SDNAME',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
+ {name:'Special subdistricts',url:ROOT+'nysp_sd/FeatureServer/0/query?'+p({f:'json',where:'1=1',outFields:'SUBDIST',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
+ {name:'MIH polygons',url:ROOT+'nycmih/FeatureServer/0/query?'+p({f:'json',where:'1=1',outFields:'*',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
+ {name:'NYC GeoSearch / address search',url:'https://geosearch.planninglabs.nyc/v2/search?'+p({text:'120 Broadway, Manhattan',size:1}),check:j=>j.features?.length>0},
+ {name:'Application JavaScript',url:'./app.js?v=2',check:(_,t)=>t.includes('const SERVICE_ROOT')}
+];
+async function run(){
+ const body=document.getElementById('tests');body.innerHTML='';
+ const rows=tests.map(t=>{const row=document.createElement('tr');const name=document.createElement('td');name.textContent=t.name;const status=document.createElement('td');status.textContent='Checking…';status.className='pending';const msg=document.createElement('td');row.append(name,status,msg);body.appendChild(row);return {status,msg}});
+ let passed=0;
+ await Promise.all(tests.map(async(t,i)=>{
+  const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),16000);let ok=false,detail='';
+  try{const r=await fetch(t.url,{signal:ac.signal});if(!r.ok)throw Error('HTTP '+r.status);const text=await r.text();const result=t.name==='Application JavaScript'?{}:JSON.parse(text);if(result.error)throw Error(result.error.message||'ArcGIS error');ok=!!t.check(result,text);detail=ok?'Valid response': 'Response received, but expected data was missing';}
+  catch(e){detail=e.name==='AbortError'?'Timed out after 16 seconds':e.message}
+  finally{clearTimeout(timer)}
+  rows[i].status.textContent=ok?'PASS':'FAIL';rows[i].status.className=ok?'pass':'fail';rows[i].msg.textContent=detail;if(ok)passed++;
+ }));
+ document.getElementById('totals').textContent=passed+'/'+tests.length+' tests passed. '+(passed===tests.length?'Live integrations responded successfully.':'Some integrations need investigation.');
+}
+document.getElementById('run').onclick=run;run();
+</script></main></body></html>
