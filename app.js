@@ -37,7 +37,8 @@ const LOT_COLORS=Object.freeze({
  '11':'#2E2E2E'  // Vacant Land: RGB(46,46,46)
 });
 const UNKNOWN_LANDUSE_COLOR='#EBEBEB'; // All Others / No Data: RGB(235,235,235)
-const LANDUSE_FILL_OPACITY=0.60;
+// Independent, fill-only display controls; lines, labels, and pointer hit-testing are unchanged.
+const layerFillOpacity={zoning:0.59,landuse:0.60};
 const LANDUSE_STANDARD_URL='https://www.nyc.gov/assets/planning/download/pdf/applicants/applicant-portal/area_map_standard.pdf';
 const FORMAT=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -68,12 +69,12 @@ function gisParams(geometry,geometryType){
 }
 const zoneColor=z=>{z=String(z||'');return z.startsWith('R')?'#f7d88c':z.startsWith('C')?'#eca3a6':z.startsWith('M')?'#b9a0cd':'#b6d8cd'};
 const layerStyles={
- zoning:f=>({color:'#957d89',weight:.8,fillColor:zoneColor(f.properties?.ZONEDIST),fillOpacity:.59}),
+ zoning:f=>({color:'#957d89',weight:.8,fillColor:zoneColor(f.properties?.ZONEDIST),fillOpacity:layerFillOpacity.zoning}),
  commercial:()=>({color:'#ce4f75',weight:1.4,fillColor:'#f18eb4',fillOpacity:.24,dashArray:'4 3'}),
  special:()=>({color:'#544091',weight:2,fillColor:'#c8b9e8',fillOpacity:.08,dashArray:'6 4'}),
  subdistrict:()=>({color:'#8e55b1',weight:1.4,fillColor:'#d7b5e8',fillOpacity:.08,dashArray:'2 5'}),
  mih:()=>({color:'#2d997e',weight:2.2,fillColor:'#80d8ba',fillOpacity:.13,dashArray:'6 3'}),
- lots:f=>({color:flags.landuse?'#928a94':'#99929b',weight:map.getZoom()>=18?.9:.6,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse??'').padStart(2,'0')]||UNKNOWN_LANDUSE_COLOR):'#fff',fillOpacity:flags.landuse?LANDUSE_FILL_OPACITY:0})
+ lots:f=>({color:flags.landuse?'#928a94':'#99929b',weight:map.getZoom()>=18?.9:.6,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse??'').padStart(2,'0')]||UNKNOWN_LANDUSE_COLOR):'#fff',fillOpacity:flags.landuse?layerFillOpacity.landuse:0})
 };
 const titles={zoning:'Zoning district',commercial:'Commercial overlay',special:'Special district',subdistrict:'Special subdistrict',mih:'Mandatory Inclusionary Housing',lots:'Tax lot'};
 const featureLabel=(key,p)=>({
@@ -97,6 +98,15 @@ function createLayers(){
  for(const key of Object.keys(URLS))layerGroups[key].addTo(map);
  inspectLayer=L.geoJSON(null,{style:{color:'#4b277e',weight:3,fillColor:'#8b6bb7',fillOpacity:.16},interactive:false}).addTo(map);
 }
+// Update rendered feature styles in place: no network fetch, geometry replacement or click-handler change.
+window.ZOLA_SET_FILL_OPACITY=(type,percent)=>{
+ if(!Object.prototype.hasOwnProperty.call(layerFillOpacity,type))return;
+ const value=Number(percent);
+ if(!Number.isFinite(value))return;
+ layerFillOpacity[type]=Math.max(0,Math.min(100,value))/100;
+ if(type==='zoning')layerGroups.zoning?.setStyle(layerStyles.zoning);
+ else layerGroups.lots?.setStyle(layerStyles.lots);
+};
 function bringHighlights(){layerGroups.lots.bringToFront();inspectLayer.bringToFront()}
 window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS=()=>bringHighlights();
 function checkLayer(key){return key==='lots'?(flags.lots||flags.landuse):flags[key]}
