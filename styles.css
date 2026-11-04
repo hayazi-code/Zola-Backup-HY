@@ -541,3 +541,7 @@
  .property-section{padding:14px}
  .mobile-sheet-body .side-scroll{min-height:0;overflow-y:auto}
 }
+
+/* Build 25: DCP land-use legend fills down the left column (01-06), then right (07-11, Other). */
+#map-key-content .landuse-key-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,auto));grid-auto-flow:column;gap:6px 13px;max-height:none;overflow:visible}
+@media(max-width:740px){#map-key-content .landuse-key-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,auto));grid-auto-flow:column;gap:5px 8px;max-height:none!important;overflow:visible}}
