@@ -317,7 +317,7 @@ function start(){
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();bindControls();selectMode('inspect');renderSelected();
+ createLayers();window.setupLayerExplorer?.(map);bindControls();selectMode('inspect');renderSelected();
  map.on('moveend',refreshMap);
  map.on('click',e=>inspectAt(e.latlng));
  map.on('draw:created',e=>{if(drawTool)drawTool.disable();drawHighlight.clearLayers();drawHighlight.addLayer(e.layer);selectByGeometry(e.layer.toGeoJSON())});
