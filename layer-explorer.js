@@ -92,14 +92,15 @@ const GROUPS=[
 ];
 const ITEMS=GROUPS.flatMap(g=>g.items.map(item=>({...item,group:g.name})));
 const YEAR_OPTIONS=['2024','2022','2020','2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924'];
-const VERIFIED_YEARS=new Set(['2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924']);
-const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0};
+const VERIFIED_YEARS=new Set(['2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924']); // Listed in the legacy NYC tile catalog; runtime may still require credentials.
+const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0,mode:'transit',aerialYear:'current',buildingLayer:null,buildingAbort:null,buildingToken:0,baseLoadToken:0};
 const el=id=>document.getElementById(id),sr=(a)=>String(a??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const baseOptions={
  transit:{name:'Transit',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attribution:'&copy; OpenStreetMap contributors',maxNativeZoom:19},
- buildings:{name:'Building Footprints',url:'https://maps.nyc.gov/xyz/1.0.0/carto/basemap/{z}/{x}/{y}.jpg',labelUrl:'https://maps.nyc.gov/xyz/1.0.0/carto/label/{z}/{x}/{y}.png8',attribution:'&copy; City of New York',maxNativeZoom:19},
- aerial:{name:'Aerial Imagery',attribution:'&copy; City of New York imagery',maxNativeZoom:19}
+ buildings:{name:'Building Footprints',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attribution:'&copy; OpenStreetMap contributors · NYC OTI building footprints',maxNativeZoom:19},
+ aerial:{name:'Aerial Imagery',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attribution:'Tiles &copy; Esri, Maxar, Earthstar Geographics and GIS User Community',maxNativeZoom:19}
 };
+const BUILDINGS_URL='https://services2.arcgis.com/IsDCghZ73NgoYoz5/ArcGIS/rest/services/NYC_Building_Footprint/FeatureServer/0/query';
 function smallState(item,value,kind=''){
  const s=el('extra-status-'+item.id);
  if(s){s.textContent=value;s.dataset.kind=kind;}
@@ -214,7 +215,7 @@ function buildBasemaps(){
  const body=document.createElement('div');body.className='layer-group-items';group.append(body);
  const baseChoices=[
   {id:'transit',name:'Transit',swatch:'#cc7364',available:true,checked:true,note:'Minimal streets with optional transit lines'},
-  {id:'buildings',name:'Building Footprints',swatch:'#a09da1',available:true,note:'NYC cartographic tiles include buildings, streets and parks'},
+  {id:'buildings',name:'Building Footprints',swatch:'#a09da1',available:true,note:'Real NYC OTI building polygon outlines from an ArcGIS FeatureServer. Zoom to 16+.'},
   {id:'3d',name:'3D Buildings',swatch:'#b8b8be',available:false,note:'Interactive 3D building models require a 3D mapping engine'}
  ];
  for(const option of baseChoices){
@@ -231,17 +232,27 @@ function buildBasemaps(){
  const aerialRadio=document.createElement('input');aerialRadio.type='radio';aerialRadio.name='basemap';aerialRadio.value='aerial';
  const sw=document.createElement('i');sw.className='catalog-swatch';sw.style.background='#a6bdce';
  aerialRow.append(aerialRadio,sw,document.createTextNode('Aerial Imagery'));aerial.append(aerialRow);
- aerialRadio.onchange=()=>{if(aerialRadio.checked)setBasemap('aerial')};
+ aerialRadio.onchange=()=>{if(aerialRadio.checked){state.aerialYear='current';latestRadio.checked=true;setBasemap('aerial')}};
+ const explanation=document.createElement('div');explanation.className='basemap-note';
+ explanation.textContent='Current imagery uses Esri World Imagery. Historic NYC tiles may require access; if unavailable the map automatically returns to current imagery.';
+ aerial.append(explanation);
  const years=document.createElement('div');years.className='aerial-year-grid';
+ const latest=document.createElement('label');latest.className='aerial-year aerial-current';
+ const latestRadio=document.createElement('input');latestRadio.type='radio';latestRadio.name='aerial-year';latestRadio.value='current';latestRadio.checked=true;
+ latest.append(latestRadio,document.createTextNode('Current imagery'));years.append(latest);
+ latestRadio.onchange=()=>{if(latestRadio.checked){state.aerialYear='current';aerialRadio.checked=true;setBasemap('aerial')}};
  for(const year of YEAR_OPTIONS){
   const label=document.createElement('label');label.className='aerial-year';
-  const radio=document.createElement('input');radio.type='radio';radio.name='aerial-year';radio.value=year;radio.checked=year==='2018';radio.disabled=!VERIFIED_YEARS.has(year);
+  const radio=document.createElement('input');radio.type='radio';radio.name='aerial-year';radio.value=year;radio.checked=false;radio.disabled=!VERIFIED_YEARS.has(year);
   label.append(radio,document.createTextNode(year));
   if(radio.disabled)label.title='NYC map tiles for '+year+' have not been verified';
   radio.onchange=()=>{if(radio.checked){state.aerialYear=year;aerialRadio.checked=true;setBasemap('aerial')}};
   years.append(label);
  }
  aerial.append(years);body.append(aerial);
+ const status=document.createElement('p');status.id='basemap-status';status.className='basemap-status';
+ status.textContent='Using minimal street map. Choose a basemap.';
+ body.append(status);
  return group;
 }
 function filter(){
@@ -260,18 +271,101 @@ function filter(){
   if(q&&!group.hidden)group.open=true;
  }
 }
+function baseStatus(message,kind=''){
+ const out=el('basemap-status');if(out){out.textContent=message;out.dataset.kind=kind}
+}
+function dropBuildingLayer(){
+ ++state.buildingToken;
+ state.buildingAbort?.abort();state.buildingAbort=null;
+ if(state.buildingLayer){state.map.removeLayer(state.buildingLayer);state.buildingLayer=null}
+}
+async function loadBuildingFootprints(){
+ if(state.mode!=='buildings'||!state.map)return;
+ const map=state.map;
+ state.buildingAbort?.abort();
+ if(!state.buildingLayer){
+  state.buildingLayer=L.geoJSON(null,{
+   style:{color:'#746c7b',weight:1.2,fillColor:'#9a939f',fillOpacity:.62},
+   onEachFeature:(f,l)=>{
+    const p=f.properties||{};
+    l.bindPopup('<strong>NYC building footprint</strong><div>BIN: '+sr(p.BIN??'not available')+'</div><div>BBL: '+sr(p.BASE_BBL??p.MAPPLUTO_BBL??'not available')+'</div><small>Source: NYC Office of Technology and Innovation</small>');
+    l.bindTooltip('Building BIN '+sr(p.BIN||''),{sticky:true});
+   }
+  }).addTo(map);
+ }
+ if(map.getZoom()<16){
+  state.buildingLayer.clearLayers();
+  baseStatus('Building footprint polygons appear at zoom level 16 or closer.','');
+  return;
+ }
+ const token=++state.buildingToken, ac=new AbortController();state.buildingAbort=ac;
+ const b=map.getBounds(),g={xmin:b.getWest(),ymin:b.getSouth(),xmax:b.getEast(),ymax:b.getNorth(),spatialReference:{wkid:4326}};
+ const args={f:'geojson',where:'1=1',outFields:'*',geometry:JSON.stringify(g),geometryType:'esriGeometryEnvelope',spatialRel:'esriSpatialRelIntersects',inSR:4326,outSR:4326,resultRecordCount:1500,resultOffset:0};
+ baseStatus('Loading actual NYC building footprints…');
+ try{
+  const features=[];let truncated=false;
+  for(let i=0;i<3;i++){
+   args.resultOffset=i*1500;
+   const result=await fetchJSON(BUILDINGS_URL,args,ac.signal);
+   const batch=result.features||[];
+   features.push(...batch);
+   if(batch.length<1500&&!result.exceededTransferLimit)break;
+   if(i===2)truncated=true;
+  }
+  if(ac.signal.aborted||token!==state.buildingToken||state.mode!=='buildings')return;
+  state.buildingLayer.clearLayers();
+  state.buildingLayer.addData({type:'FeatureCollection',features});
+  state.buildingLayer.bringToFront();
+  baseStatus(features.length.toLocaleString()+' NYC OTI building footprints shown'+(truncated?' · zoom in for complete coverage':''),truncated?'':'good');
+ }catch(e){
+  if(ac.signal.aborted||token!==state.buildingToken)return;
+  state.buildingLayer.clearLayers();
+  baseStatus('Building footprint service unavailable: '+e.message+'. Street map remains visible.','error');
+ }
+}
 function setBasemap(id){
  const def=baseOptions[id];if(!def||!state.map)return;
  const map=state.map;
+ ++state.baseLoadToken;const token=state.baseLoadToken;
+ dropBuildingLayer();
+ state.mode=id;
  map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});
- const year=state.aerialYear||'2018';
- const url=id==='aerial'?'https://maps.nyc.gov/xyz/1.0.0/photo/'+year+'/{z}/{x}/{y}.png8':def.url;
- const base=L.tileLayer(url,{attribution:id==='aerial'?'&copy; City of New York, '+year+' imagery':def.attribution,maxZoom:20,maxNativeZoom:def.maxNativeZoom,updateWhenIdle:true}).addTo(map);
+ let year=state.aerialYear||'current';
+ const historic=id==='aerial'&&year!=='current';
+ const url=historic?'https://maps.nyc.gov/xyz/1.0.0/photo/'+encodeURIComponent(year)+'/{z}/{x}/{y}.png8':def.url;
+ const attribution=historic?'&copy; City of New York historical imagery '+year:def.attribution;
+ const base=L.tileLayer(url,{attribution,maxZoom:20,maxNativeZoom:def.maxNativeZoom,updateWhenIdle:true}).addTo(map);
  base.bringToBack();
- if(def.labelUrl||id==='aerial')L.tileLayer(id==='aerial'?'https://maps.nyc.gov/xyz/1.0.0/carto/label-lt/{z}/{x}/{y}.png8':def.labelUrl,{attribution:def.attribution,maxNativeZoom:19,maxZoom:20,updateWhenIdle:true}).addTo(map);
+ const source=historic?'NYC historical '+year:id==='aerial'?'Esri World Imagery':id==='buildings'?'OpenStreetMap + NYC building polygons':'OpenStreetMap';
+ baseStatus('Loading '+source+'…');
+ let loaded=0,errors=0,settled=false;
+ const report=()=>{if(loaded>0&&!settled&&token===state.baseLoadToken){settled=true;baseStatus(source+' loaded.','good')}};
+ base.on('tileload',()=>{loaded++;report()});
+ base.on('tileerror',()=>{
+  if(token!==state.baseLoadToken)return;
+  errors++;
+  if(errors>=2||errors>loaded+1){
+   state.baseLoadToken++;
+   if(historic){
+    state.aerialYear='current';
+    const current=el('basemap-status');
+    document.querySelector('input[name="aerial-year"][value="current"]').checked=true;
+    setBasemap('aerial');
+    baseStatus('Historical '+year+' imagery could not load. Showing current Esri imagery instead.','error');
+   }else if(id==='aerial'){
+    const transit=document.querySelector('input[name="basemap"][value="transit"]');
+    if(transit)transit.checked=true;
+    setBasemap('transit');
+    baseStatus('Imagery tiles failed. Reverted to reliable OpenStreetMap.','error');
+   }else{
+    baseStatus(source+' tiles failed to load. Check your network connection.','error');
+   }
+  }
+ });
  map.getContainer().dataset.basemap=id;
  const key=document.querySelector('.map-key');if(key)key.style.background=id==='aerial'?'#ffffffec':'';
  state.tiles=base;
+ if(id==='buildings')loadBuildingFootprints();
 }
 function checked(id){const input=el('sub-'+id);return input?(!input.disabled&&input.checked):true}
 function visibleCore(key,feature){
@@ -376,7 +470,7 @@ function makeLayer(item){
  });
 }
 function source(item){return ROOT+item.source+'/FeatureServer/'+(item.layer||0)}
-function onVisibleViewport(){clearTimeout(state.loaded);state.loaded=setTimeout(()=>{for(const entry of state.active.values())if(entry.item)load(entry.item)},420)}
+function onVisibleViewport(){clearTimeout(state.loaded);state.loaded=setTimeout(()=>{for(const entry of state.active.values())if(entry.item)load(entry.item);if(state.mode==='buildings')loadBuildingFootprints()},420)}
 async function fetchJSON(url,params={},signal){
  const u=new URL(url);for(const [k,v] of Object.entries(params))u.searchParams.set(k,String(v));
  const response=await fetch(u,{signal});if(!response.ok)throw Error('HTTP '+response.status);
