@@ -146,3 +146,11 @@ The base street map stays visible when all optional layers are turned off. **Des
 ## Deployment troubleshooting
 
 The header displays the current **BUILD** version. If the browser shows radio buttons in the Basemaps menu or an older build number, it is serving an older GitHub Pages version. Check GitHub Actions for the latest Pages deployment and hard refresh the site with a new URL query string. App controls in BUILD 18 are independent checkboxes for Transit, Building Footprints, and Aerial Imagery; sub-options for subway routes and stations. These layers query the ArcGIS regional public service and fall back to the separately hosted NYC Planning `SubwayLines_share` and `SubwayStations_share` feature services if a primary query fails or returns no features.
+
+## Build 19: MTA styling and map labels
+
+The transit line color mapping follows the published [MTA Brand Colors](https://www.mta.info/document/168976) and the [New York State MTA Colors dataset](https://data.ny.gov/d/3uhz-sej2). These **current branding hex codes** differ from some historical subway signage palettes. Mapped route features use their `short_name` designator to select official color groups (A/C/E blue; B/D/F/M orange; G green; J/Z brown; L and shuttles gray; N/Q/R/W yellow; numbered routes red/green/purple). If no recognized route is available, the application uses a valid six-digit source-provided color before falling back to neutral blue-gray.
+
+Station names are now permanent on-map Leaflet tooltip labels from zoom level 13 onward when **Subway stations** is checked; at more distant zoom levels they remain hover-visible. Nearby duplicate platform records with the same name and coordinates rounded to 0.001° are deduplicated to reduce visual clutter. The Basemaps and transit menu has explicit inner gutters on both desktop and mobile.
+
+Transit geometry is from a historic public GIS service; route placement and service changes may not match current MTA operations. This is not live MTA service data.
