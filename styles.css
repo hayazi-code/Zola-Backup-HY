@@ -726,3 +726,46 @@
  #map-key.map-key.is-collapsed{bottom:116px;max-width:120px!important}
  #map-key.map-key:not(.is-collapsed){max-width:min(315px,calc(100vw - 18px))!important}
 }
+
+/* BUILD 32: keep legend above the map and away from the lower GPS tools. */
+#map-key.map-key,
+#map-key.map-key.is-collapsed{
+ top:68px!important;
+ bottom:auto!important;
+ left:12px!important;
+ right:auto!important;
+}
+#map-key #map-key-content{
+ max-height:min(53dvh,430px);
+ overflow-y:auto;
+ overscroll-behavior:contain;
+}
+#map-key .landuse-key-grid{
+ max-height:none!important;
+ overflow:visible!important;
+}
+#map-key.map-key.is-collapsed #map-key-content{display:none!important}
+.geolocation-tools #locate-me{
+ display:inline-flex;justify-content:center;align-items:center;
+ width:44px;min-width:44px;max-width:44px;height:44px;
+ padding:0!important;
+ font-size:24px;
+ line-height:1;
+}
+.geolocation-tools .locate-glyph{display:block;font-size:25px;line-height:1}
+.visually-hidden{
+ position:absolute!important;width:1px!important;height:1px!important;
+ padding:0!important;margin:-1px!important;overflow:hidden!important;
+ clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;
+}
+.geolocation-tools #recenter-me{min-width:44px;min-height:44px;padding:0!important;font-size:23px}
+@media(max-width:740px){
+ #map-key.map-key,
+ #map-key.map-key.is-collapsed{
+  top:68px!important;bottom:auto!important;left:9px!important;
+  max-width:min(315px,calc(100vw - 18px))!important;
+ }
+ #map-key.map-key.is-collapsed{max-width:120px!important}
+ #map-key #map-key-content{max-height:min(48dvh,350px);overflow-y:auto}
+ .geolocation-tools{right:10px;bottom:117px}
+}
