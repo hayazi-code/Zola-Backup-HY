@@ -12,8 +12,8 @@ function show(expand,opts={}){
  const toggle=el('mobile-sheet-toggle');
  toggle?.setAttribute('aria-expanded',String(expanded));
  toggle?.setAttribute('aria-label',expanded?'Collapse controls to see the map':'Expand controls');
- const title=el('mobile-sheet-title'),tab=document.querySelector('.tabs button.active');
- if(title)title.textContent=expanded?(tab?.textContent?.trim()||'Explore NYC zoning'):'Explore NYC zoning';
+ const title=el('mobile-sheet-title');
+ if(title)title.textContent='Explore NYC zoning';
  el('mobile-sheet')?.setAttribute('data-sheet-state',expanded?'expanded':'collapsed');
  if(expanded&&opts.focusSearch){setTimeout(()=>{el('search')?.focus({preventScroll:true})},120)}
  requestAnimationFrame(invalidateMap);
@@ -21,17 +21,12 @@ function show(expand,opts={}){
 function navigate(name){
  if(!isMobile.matches)return;
  if(name==='search'){
-  el('tab-explore')?.click();
   show(true,{focusSearch:true});
  }else if(name==='layers'){
-  el('tab-explore')?.click();show(true);
+  show(true);
   const tree=el('layer-tree');if(tree){el('mobile-sheet-body')?.querySelector('.side-scroll')?.scrollTo({top:0,behavior:'instant'});tree.scrollIntoView({block:'nearest',behavior:'smooth'})}
- }else if(name==='lots'){
-  el('tab-selected')?.click();show(true);
- }else if(name==='scenario'){el('tab-scenario')?.click();show(true)}
- else show(false);
+ }else show(false);
 }
-function onTab(){if(isMobile.matches&&expanded){const title=el('mobile-sheet-title');const t=document.querySelector('.tabs button.active');if(title&&t)title.textContent=t.textContent.trim()}}
 function onBreakpoint(){
  if(isMobile.matches){document.body.classList.add('mobile-layout');show(false)}
  else{document.body.classList.remove('mobile-layout','mobile-sheet-expanded','mobile-sheet-collapsed');expanded=false}
@@ -44,7 +39,6 @@ function install(map){
  toggle.addEventListener('click',()=>{if(dragMoved){dragMoved=false;return}show(!expanded)});
  el('mobile-search')?.addEventListener('click',()=>navigate('search'));
  el('mobile-layers')?.addEventListener('click',()=>navigate('layers'));
- el('mobile-lots')?.addEventListener('click',()=>navigate('lots'));
  el('mobile-close')?.addEventListener('click',()=>show(false));
  const actions=bar.querySelector('.mobile-quick-actions');
  actions?.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -63,7 +57,6 @@ function install(map){
  });
  toggle.addEventListener('pointercancel',()=>{startY=null;startX=null});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&isMobile.matches&&expanded){const suggestions=el('suggestions');if(suggestions&&!suggestions.hidden)return;show(false)}});
- for(const tab of document.querySelectorAll('.tabs button'))tab.addEventListener('click',onTab);
  isMobile.addEventListener?.('change',onBreakpoint);
  window.addEventListener('orientationchange',()=>setTimeout(invalidateMap,350));
  window.addEventListener('resize',()=>{if(isMobile.matches)invalidateMap()});
