@@ -655,3 +655,27 @@
  #layer-tree .lot-outline-field input[type=range]{height:36px;touch-action:pan-x}
  #layer-tree .lot-outline-toggle input{width:19px;height:19px}
 }
+
+/* Build 29: focused, map-anchored parcel preview with a clear details action. */
+#map .leaflet-popup.parcel-quick-popup .leaflet-popup-content-wrapper{
+ border-radius:9px;
+ box-shadow:0 5px 22px rgba(34,29,45,.24);
+ border:1px solid #e7e0ed;
+}
+#map .parcel-quick-popup .leaflet-popup-content{margin:13px 15px 14px;min-width:0}
+#map .parcel-preview-card{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#332e3a}
+#map .parcel-preview-eyebrow{font-size:10px;letter-spacing:.09em;font-weight:750;color:#765c8a;margin-bottom:5px}
+#map .parcel-preview-card h3{font-size:16px;line-height:1.25;margin:0 0 4px;font-weight:750;overflow-wrap:anywhere}
+#map .parcel-preview-bbl{font-size:11px;color:#6d6574;margin:0 0 12px;overflow-wrap:anywhere}
+#map .parcel-preview-grid{margin:0 0 12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 12px}
+#map .parcel-preview-grid>div{min-width:0}
+#map .parcel-preview-grid dt{font-size:10px;color:#7b7180;margin-bottom:3px}
+#map .parcel-preview-grid dd{font-size:12px;font-weight:700;margin:0;line-height:1.35;overflow-wrap:anywhere}
+#map .parcel-preview-details{display:block;width:100%;border:1px solid #563087;background:#563087;color:white;border-radius:5px;padding:10px 12px;font-size:12px;font-weight:700;min-height:39px}
+#map .parcel-preview-details:hover,#map .parcel-preview-details:focus-visible{background:#45216e;outline-offset:2px}
+#map .parcel-quick-popup .leaflet-popup-close-button{width:26px;height:26px;font-size:20px;line-height:24px;color:#6c6271}
+@media(max-width:740px){
+ #map .parcel-quick-popup .leaflet-popup-content{margin:12px 12px}
+ #map .parcel-preview-card h3{font-size:15px}
+ #map .parcel-preview-details{min-height:44px;font-size:13px}
+}
