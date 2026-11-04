@@ -13,9 +13,11 @@
 - **Exact NYC DCP land-use colors**, converted directly from [DCP Area Map Standard v1.7, page 3](https://www.nyc.gov/assets/planning/download/pdf/applicants/applicant-portal/area_map_standard.pdf). DCP specifies 40% transparency, implemented as Leaflet fillOpacity = 0.60. A full category legend appears when land-use coloring is enabled.
 - Search for NYC properties by **10-digit BBL**, or search by address/name using NYC Planning GeoSearch.
 - Click any mapped tax lot to inspect MapPLUTO address, zoning districts, overlays, lot area, land use, building information, reported FAR attributes, and source version.
-- A searchable **ZoLa-style grouped layer catalog** with dozens of public service choices: zoning districts, tax lots and land use coloring, filtered C/M districts and C1/C2 overlays, zoning map index, adopted/certified map amendments, special districts, MIH, IH, limited height, lower-density growth management, transit zones, designated industrial areas, environmental designations, flood hazards, historic resource screening layers, public access areas, and administrative boundaries.
-- Additional layers include NYC community districts, Council districts, State Senate and Assembly districts, 2020 NTAs, census tracts, and subway lines/stations. Disabled catalog entries clearly identify missing service integrations; unavailable layers cannot be toggled.
-- Three selectable basemaps: minimal OpenStreetMap, NYC cartographic tiles, and labeled historic 2018 NYC aerial orthophotography. Click any optional data feature to inspect its available attributes and source link.
+- The layer menu mirrors the provided **ZoLa section order and nesting**: Zoning and Land Use, Supporting Zoning Layers, Other Supporting Layers, Administrative Boundaries, and Basemaps. Child menus include C1–C8, M1–M3, R1–R10, C1/C2 overlays, flood-zone types, FRESH incentive types, landmark classes, Council district years, and aerial imagery years.
+- C1/C2 and district subtype checkboxes actually filter the core zoning geometry. FRESH uses DCP's `FRESH_Food_Stores` service with published Name categories. Pending map amendments use `nyzma` features with `STATUS = 'Certified'`, not all applications in earlier pre-certification stages.
+- The amendment timeline uses its `EFFECTIVE` field where present. The current `nyzma` dataset documents changes from 2002 onward, despite the ZoLa-style slider running from 1970-01 to 2028-11.
+- The **Basemaps** section has Transit (minimal OSM), Building Footprints (NYC cartographic tiles), 3D Buildings (unavailable), and Aerial Imagery (year choices). NYC public XYZ tiles are documented for 2018 and earlier; 2020, 2022, and 2024 are in the menu but disabled until a usable keyless service is verified.
+- Nonworking/specialized layers are **explicitly labeled Not linked**. Some connected category filters, such as the precise parking subareas and landmark classifications, still require validation against published feature fields.
 - Select **noncontiguous** tax lots by clicking, drawing polygons, or drawing rectangles. Tax lots are identified by their full NYC BBL.
 - Summarize total mapped lot area and primary zoning districts; zoom to the selected lots; export complete selection to CSV.
 - Enter an assumed FAR for a **purely illustrative** aggregate floor-area calculation. This is not a zoning entitlement or valid bulk analysis.
@@ -40,6 +42,9 @@ The app uses public NYC Department of City Planning ArcGIS FeatureServer endpoin
 | Special purpose districts | `nysp/FeatureServer/0` |
 | Special purpose subdistricts | `nysp_sd/FeatureServer/0` |
 | Mandatory Inclusionary Housing areas | `nycmih/FeatureServer/0` |
+| FRESH incentives (3 categories) | `FRESH_Food_Stores/FeatureServer/0` |
+| Certified zoning map amendments | `nyzma/FeatureServer/0`, `STATUS = 'Certified'` |
+| Industrial Business Zones | `Industry_in_NYC_WFL/FeatureServer/0` |
 
 Base URL: `https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/`
 
@@ -73,6 +78,9 @@ Map rendering uses Leaflet 1.9.4; geometry drawing uses Leaflet.draw 1.0.4. ArcG
 - Map rendering has a 6,000-feature safety budget per layer per viewport and warns to zoom in if coverage is incomplete.
 - FAR demonstration does not account for zoning-district rules, special districts, MIH, overlays, mixed-use deductions, bulk, height, yards, floor-area exclusions, conditions, or zoning lot status.
 - No 3D development-envelope simulator is implemented yet.
+- The ZoLa-style menu is now structurally aligned with the supplied screenshots; exact service parity is not achieved. In particular: ZoLa's 3D buildings, 2015 preliminary flood maps, Zoning for Accessibility, Appendix I, Appendix J, Battery Park City polygon, and historic 2013–2023 City Council map are not all independently connected.
+- Parks are represented by the publicly available `v_GFT_Open_Spaces` planning-screening service, which is not the legal inventory of NYC parklands.
+- The initial Transit basemap is a subdued OpenStreetMap street map; it is not yet ZoLa's transit styling. NYC cartographic tiles include building drawings, but the Building Footprints basemap is not yet a standalone vector footprints overlay.
 - Base map and zoning visual style are inspired by, not an exact reproduction of, official ZoLa.
 
 ## Official sources and references
