@@ -108,50 +108,138 @@ function groups(){
  const out=new Map();for(const i of ITEMS){if(!out.has(i.group))out.set(i.group,[]);out.get(i.group).push(i)}return out;
 }
 function build(){
- const host=el('layer-tree');if(!host)return;
- host.replaceChildren();
+ const host=el('layer-tree');if(!host)return;host.replaceChildren();
  const quick=document.createElement('div');quick.className='layer-explorer-tools';
- quick.innerHTML='<div class="eyebrow">Show zoning and related data on map</div><input id="layer-search" type="search" placeholder="Filter map layers…" aria-label="Filter map layers" autocomplete="off"><div class="layer-options"><label><input type="checkbox" id="labels-on" checked> Zoning labels</label><button id="layers-clear" type="button">Hide optional layers</button></div>';
+ quick.innerHTML='<div class="eyebrow">Show zoning and related data on map</div>'+
+  '<input id="layer-search" type="search" placeholder="Filter map layers…" aria-label="Filter map layers" autocomplete="off">'+
+  '<div class="layer-options"><label><input type="checkbox" id="labels-on" checked> Zoning labels</label>'+
+  '<button id="layers-clear" type="button">Hide optional layers</button></div>';
  host.appendChild(quick);
- for(const [group,items] of groups()){
-  const details=document.createElement('details');details.className='layer-group';details.open=group==='Zoning and land use'||group==='Supporting zoning layers';
-  const summary=document.createElement('summary');summary.textContent=group;const count=document.createElement('small');count.textContent=items.length;summary.append(count);details.append(summary);
+ for(const group of GROUPS){
+  const details=document.createElement('details');details.className='layer-group';details.open=group.name==='Zoning and Land Use'||group.name==='Supporting Zoning Layers';
+  const summary=document.createElement('summary');summary.append(document.createTextNode(group.name));
+  const count=document.createElement('small');count.textContent=String(group.count);summary.append(count);details.append(summary);
   const body=document.createElement('div');body.className='layer-group-items';
-  for(const item of items){
-   const row=document.createElement('div');row.className='catalog-row';row.dataset.search=(item.name+' '+group).toLowerCase();
-   const label=document.createElement('label');label.className='catalog-label';
-   const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.id=item.core?'layer-'+item.core:'extra-'+item.id;checkbox.checked=Boolean(item.checked);checkbox.disabled=item.available===false;
-   const title=document.createElement('span');title.textContent=item.name;label.append(checkbox,title);row.append(label);
-   const info=document.createElement('span');info.className='catalog-meta';
-   if(item.available===false){const badge=document.createElement('span');badge.className='catalog-unavailable';badge.textContent='Not linked';badge.title=item.note;info.append(badge)}
-   else if(item.core){const status=document.createElement('em');status.id='state-'+item.core;status.textContent=item.checked?'Loading…':'Off';info.append(status);}
-   else {const status=document.createElement('em');status.id='extra-status-'+item.id;status.textContent='Off';info.append(status);}
-   if(item.source){const a=document.createElement('a');a.textContent='ⓘ';a.className='catalog-source';a.title='Open service metadata';a.target='_blank';a.rel='noopener';a.href=ROOT+encodeURIComponent(item.source)+'/FeatureServer/'+(item.layer||0);info.append(a)}
-   row.append(info);if(item.note)row.title=item.note;
-   body.append(row);
-  }
+  for(const item of group.items)body.append(renderItem(item,0,item));
   details.append(body);host.append(details);
  }
- const basemaps=document.createElement('details');basemaps.className='layer-group';basemaps.open=true;
- basemaps.innerHTML='<summary>Basemaps <small>3</small></summary><div class="layer-group-items"></div>';
- const body=basemaps.querySelector('div');
- for(const [id,def] of Object.entries(baseOptions)){
-  const row=document.createElement('label');row.className='catalog-row catalog-label';
-  const radio=document.createElement('input');radio.type='radio';radio.name='basemap';radio.value=id;radio.checked=id==='minimal';
-  row.append(radio,document.createTextNode(def.name));body.append(row);
-  radio.addEventListener('change',()=>{if(radio.checked)setBasemap(id)});
- }
- host.append(basemaps);
- const missing=ITEMS.filter(i=>i.available===false).length;
+ host.append(buildBasemaps());
+ const unlinked=allNodes().filter(n=>n.available===false).length;
  const footer=document.createElement('p');footer.className='catalog-footer';
- footer.textContent=(ITEMS.length-missing)+' mapped layer choices, '+missing+' visibly unlinked. Layer availability depends on the source service and map zoom.';
+ footer.textContent='Layers follow the official ZoLa menu hierarchy. '+unlinked+' entries are explicitly marked Not linked. Source-dependent categories need verification for exact styling and subarea filters.';
  host.append(footer);
- for(const item of ITEMS){if(item.core||item.available===false)continue;const checkbox=el('extra-'+item.id);checkbox.onchange=()=>{if(checkbox.checked)activate(item);else deactivate(item)};}
  el('layer-search').oninput=filter;
  el('layers-clear').onclick=()=>{
-  for(const item of ITEMS){if(!item.core){const cb=el('extra-'+item.id);if(cb?.checked){cb.checked=false;deactivate(item)}}else if(!['zoning','lots'].includes(item.core)){const cb=el('layer-'+item.core);if(cb?.checked){cb.checked=false;cb.dispatchEvent(new Event('change'))}}}
+  for(const item of ITEMS){if(item.core&&!['zoning','lots'].includes(item.core)){const box=el('layer-'+item.core);if(box?.checked){box.checked=false;box.dispatchEvent(new Event('change'))}}
+   if(!item.core){const box=el('extra-'+item.id);if(box?.checked){box.checked=false;deactivate(item)}}}
  };
  el('labels-on').onchange=()=>{if(state.map)state.map.getContainer().classList.toggle('hide-zoning-labels',!el('labels-on').checked)};
+}
+function allNodes(){const out=[];function walk(list){for(const n of list){out.push(n);if(n.children)walk(n.children)}}for(const g of GROUPS)walk(g.items);return out}
+function findInput(item,depth){return el((depth===0?(item.core?'layer-':'extra-'):'sub-')+item.id)}
+function renderItem(item,depth,top){
+ const wrapper=document.createElement('div');wrapper.className='catalog-node';wrapper.dataset.search=(item.name+' '+(top.group||'')).toLowerCase();wrapper.dataset.layerId=item.id;
+ const row=document.createElement('div');row.className='catalog-row';row.classList.add('catalog-depth-'+Math.min(depth,3));
+ const label=document.createElement('label');label.className='catalog-label';
+ const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.id=(depth===0?(item.core?'layer-':'extra-'):'sub-')+item.id;
+ checkbox.checked=Boolean(item.checked);checkbox.disabled=item.available===false;
+ const swatch=document.createElement('i');swatch.className='catalog-swatch';swatch.style.background=item.swatch||top.swatch||'#b7a6c4';
+ const title=document.createElement('span');title.textContent=item.name;
+ label.append(checkbox,swatch,title);row.append(label);
+ const meta=document.createElement('span');meta.className='catalog-meta';
+ if(item.available===false){const badge=document.createElement('span');badge.className='catalog-unavailable';badge.textContent='Not linked';badge.title=item.note||'No source connected';meta.append(badge)}
+ else if(item.core){const status=document.createElement('em');status.id='state-'+item.core;status.textContent=item.checked?'Loading…':'Off';meta.append(status)}
+ else if(depth===0&&item.source){const status=document.createElement('em');status.id='extra-status-'+item.id;status.textContent='Off';meta.append(status)}
+ if(item.source){const a=document.createElement('a');a.textContent='ⓘ';a.className='catalog-source';a.title='Open mapped data source';a.href=source(item);a.target='_blank';a.rel='noopener';meta.append(a)}
+ if(item.children?.length){const exp=document.createElement('button');exp.type='button';exp.className='catalog-expand';exp.textContent=item.expanded?'▴':'▾';exp.setAttribute('aria-label','Expand '+item.name);
+ exp.setAttribute('aria-expanded',item.expanded?'true':'false');meta.append(exp);
+ exp.onclick=()=>{const open=children.hidden;children.hidden=!open;exp.textContent=open?'▴':'▾';exp.setAttribute('aria-expanded',String(open))};
+ }
+ row.append(meta);wrapper.append(row);
+ if(item.note){row.title=item.note;title.title=item.note}
+ checkbox.onchange=()=>{
+  if(item.children?.length)for(const child of descendants(item)){const check=el('sub-'+child.id);if(check&&!check.disabled)check.checked=checkbox.checked}
+  if(depth===0){if(item.core){ /* app.js binds the core change callback */ }
+   else if(item.available!==false){checkbox.checked?activate(item):deactivate(item)}}
+  else{
+   updateParentCheckState(top);if(top.core)window.ZOLA_RELOAD_CORE?.(top.core);
+   else if(top.available!==false&&state.active.has(top.id))load(top);
+  }
+ };
+ let children;
+ if(item.children?.length){
+  children=document.createElement('div');children.className='catalog-children';
+  if(item.filterGroup||item.id==='landmarks'||item.id==='firm2007'||item.id==='pfirms2015'||item.id==='transit-parking'||item.id==='fresh-zones'||item.id==='council')children.classList.add('catalog-grid-children');
+  children.hidden=!item.expanded;
+  for(const child of item.children)children.append(renderItem(child,depth+1,top));
+  wrapper.append(children);
+ }
+ if(depth===0&&item.timeline)wrapper.append(makeTimeline(item));
+ return wrapper;
+}
+function descendants(item){const out=[];for(const c of item.children||[]){out.push(c);out.push(...descendants(c))}return out}
+function updateParentCheckState(top){
+ function update(n){
+  if(!n.children?.length)return;
+  for(const child of n.children)update(child);
+  const box=el('sub-'+n.id)||el((n.core?'layer-':'extra-')+n.id);
+  const enabled=n.children.map(ch=>el('sub-'+ch.id)).filter(ch=>ch&&!ch.disabled);
+  if(box&&enabled.length){const count=enabled.filter(ch=>ch.checked).length;box.indeterminate=count>0&&count<enabled.length;box.checked=count>0}
+ }
+ update(top);
+}
+function makeTimeline(item){
+ const container=document.createElement('div');container.className='zoning-timeline';
+ const row=document.createElement('div');row.className='timeline-sliders';
+ const left=document.createElement('input'),right=document.createElement('input');
+ for(const x of [left,right]){x.type='range';x.min='0';x.max='706';x.step='1';x.setAttribute('aria-label','Zoning amendment '+(x===left?'start':'end')+' month')}
+ left.value='0';right.value='706';row.append(left,right);container.append(row);
+ const labels=document.createElement('div');labels.className='timeline-dates';container.append(labels);
+ const monthString=value=>{const n=Number(value);return String(1970+Math.floor(n/12))+'-'+String(n%12+1).padStart(2,'0')};
+ const update=()=>{if(+left.value>+right.value){if(document.activeElement===left)right.value=left.value;else left.value=right.value}
+  labels.textContent=monthString(left.value)+' to '+monthString(right.value);
+  window.ZOLA_ZMA_DATE_RANGE={start:monthString(left.value),end:monthString(right.value)};
+  if(state.active.has(item.id))load(item);
+ };
+ left.oninput=update;right.oninput=update;update();
+ const note=document.createElement('small');note.textContent='Date filtering uses adoption dates when supplied by the source';note.className='timeline-note';container.append(note);
+ return container;
+}
+function buildBasemaps(){
+ const group=document.createElement('details');group.className='layer-group';group.open=true;
+ const summary=document.createElement('summary');summary.textContent='Basemaps';const n=document.createElement('small');n.textContent='4';summary.append(n);group.append(summary);
+ const body=document.createElement('div');body.className='layer-group-items';group.append(body);
+ const baseChoices=[
+  {id:'transit',name:'Transit',swatch:'#cc7364',available:true,checked:true,note:'Minimal streets with optional transit lines'},
+  {id:'buildings',name:'Building Footprints',swatch:'#a09da1',available:true,note:'NYC cartographic tiles include buildings, streets and parks'},
+  {id:'3d',name:'3D Buildings',swatch:'#b8b8be',available:false,note:'Interactive 3D building models require a 3D mapping engine'}
+ ];
+ for(const option of baseChoices){
+  const row=document.createElement('label');row.className='catalog-row catalog-label basemap-row';
+  const input=document.createElement('input');input.type='radio';input.name='basemap';input.value=option.id;input.checked=!!option.checked;input.disabled=!option.available;
+  const swatch=document.createElement('i');swatch.className='catalog-swatch';swatch.style.background=option.swatch;
+  row.append(input,swatch,document.createTextNode(option.name));
+  if(!option.available){const badge=document.createElement('span');badge.className='catalog-unavailable';badge.textContent='Not linked';row.append(badge)}
+  row.title=option.note;input.onchange=()=>{if(input.checked)setBasemap(option.id)};
+  body.append(row);
+ }
+ const aerial=document.createElement('div');aerial.className='catalog-node';
+ const aerialRow=document.createElement('label');aerialRow.className='catalog-row catalog-label basemap-row';
+ const aerialRadio=document.createElement('input');aerialRadio.type='radio';aerialRadio.name='basemap';aerialRadio.value='aerial';
+ const sw=document.createElement('i');sw.className='catalog-swatch';sw.style.background='#a6bdce';
+ aerialRow.append(aerialRadio,sw,document.createTextNode('Aerial Imagery'));aerial.append(aerialRow);
+ aerialRadio.onchange=()=>{if(aerialRadio.checked)setBasemap('aerial')};
+ const years=document.createElement('div');years.className='aerial-year-grid';
+ for(const year of YEAR_OPTIONS){
+  const label=document.createElement('label');label.className='aerial-year';
+  const radio=document.createElement('input');radio.type='radio';radio.name='aerial-year';radio.value=year;radio.checked=year==='2018';radio.disabled=!VERIFIED_YEARS.has(year);
+  label.append(radio,document.createTextNode(year));
+  if(radio.disabled)label.title='NYC map tiles for '+year+' have not been verified';
+  radio.onchange=()=>{if(radio.checked){state.aerialYear=year;aerialRadio.checked=true;setBasemap('aerial')}};
+  years.append(label);
+ }
+ aerial.append(years);body.append(aerial);
+ return group;
 }
 function filter(){
  const q=el('layer-search').value.trim().toLowerCase();
