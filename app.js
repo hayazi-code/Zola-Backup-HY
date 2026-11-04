@@ -50,7 +50,7 @@ const boroughOf=b=>({'1':'Manhattan','2':'Bronx','3':'Brooklyn','4':'Queens','5'
 const apiLayer=key=>SERVICE_ROOT+URLS[key]+'/FeatureServer/0/query';
 let map,inspectLayer;
 const layerGroups={},requests={};
-let currentParcel=null,searchTimer=null,searchSeq=0,loadTimer=null;
+let currentParcel=null,searchTimer=null,searchSeq=0,loadTimer=null,parcelPreview=null;
 let parcelLookupSeq=0,parcelLookupController=null;
 const flags={zoning:true,commercial:false,special:false,subdistrict:false,mih:false,lots:true,landuse:false};
 let toggleToken=0;
@@ -91,7 +91,7 @@ function createLayers(){
    style:layerStyles[key],
    onEachFeature:(f,l)=>{
     if(key!=='lots')l.bindTooltip(safe(featureLabel(key,f.properties||{})),{sticky:!(key==='zoning'&&map.getZoom()>=15),permanent:key==='zoning'&&map.getZoom()>=15,direction:key==='zoning'?'center':'top',className:key==='zoning'?'zoning-label':'district-tip'});
-    if(key==='lots')l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);inspect(f)});
+    if(key==='lots')l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);showParcelPreview(f,e.latlng)});
     else l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);inspectAt(e.latlng)});
    }
   });
@@ -189,10 +189,61 @@ function onFlagsChange(){
  updateMapLegend();
  refreshMap();
 }
-function inspect(f){
+// A lightweight map preview uses the already-loaded MapPLUTO feature for direct parcel clicks.
+// Other map layers can still request a parcel by point. Escaped text avoids HTML injection.
+function highlightParcel(f){
  currentParcel=f;
+ inspectLayer.clearLayers();
+ inspectLayer.addData(f);
+ bringHighlights();
+}
+function cancelParcelLookup(){
+ ++parcelLookupSeq;
+ parcelLookupController?.abort();
+ parcelLookupController=null;
+}
+function showParcelPreview(f,latlng,{fromLookup=false}={}){
+ if(!fromLookup)cancelParcelLookup();
+ if(!f?.properties)return;
+ highlightParcel(f);
+ const p=f.properties,b=bblOf(f);
+ const card=document.createElement('div');
+ card.className='parcel-preview-card';
+ const heading=document.createElement('div');heading.className='parcel-preview-eyebrow';heading.textContent='MAPPLUTO · QUICK PREVIEW';
+ const name=document.createElement('h3');name.textContent=p.Address||'Unnamed tax lot';
+ const number=document.createElement('p');number.className='parcel-preview-bbl';number.textContent='BBL '+(b||'Unavailable')+' · '+boroughOf(b);
+ const grid=document.createElement('dl');grid.className='parcel-preview-grid';
+ const landuse=String(p.LandUse??'').padStart(2,'0');
+ const zone=[p.ZoneDist1,p.ZoneDist2,p.ZoneDist3,p.ZoneDist4].filter(Boolean).join(', ')||'Not available';
+ const values=[
+  ['Zoning',zone],
+  ['Land use',LOT_USES[landuse]?landuse+' · '+LOT_USES[landuse]:'Not available'],
+  ['Lot area',p.LotArea==null||p.LotArea===''?'Not available':fmt(p.LotArea)+' sq ft'],
+  ['Built FAR',p.BuiltFAR==null||p.BuiltFAR===''?'Not available':String(p.BuiltFAR)]
+ ];
+ for(const [label,value] of values){
+  const cell=document.createElement('div');
+  const dt=document.createElement('dt');dt.textContent=label;
+  const dd=document.createElement('dd');dd.textContent=value;
+  cell.append(dt,dd);grid.append(cell);
+ }
+ const action=document.createElement('button');action.type='button';action.className='parcel-preview-details';action.textContent='View full details';
+ action.addEventListener('click',()=>{
+  map.closePopup(parcelPreview);
+  inspect(f);
+ });
+ card.append(heading,name,number,grid,action);
+ if(parcelPreview)map.closePopup(parcelPreview);
+ // Anchor at the clicked location, not at a fabricated parcel centroid.
+ parcelPreview=L.popup({className:'parcel-quick-popup',maxWidth:310,minWidth:255,autoPan:true,
+  autoPanPaddingTopLeft:[18,65],autoPanPaddingBottomRight:[18,window.matchMedia('(max-width: 740px)').matches?115:25]})
+  .setLatLng(latlng||L.geoJSON(f).getBounds().getCenter()).setContent(card);
+ parcelPreview.openOn(map);
+ notice('Parcel preview loaded. Choose View full details to open the property panel.','good');
+}
+function inspect(f){
+ highlightParcel(f);
  const p=f.properties||{},b=bblOf(f),zones=[p.ZoneDist1,p.ZoneDist2,p.ZoneDist3,p.ZoneDist4].filter(Boolean);
- inspectLayer.clearLayers();inspectLayer.addData(f);bringHighlights();
  const row=(title,value)=>'<div class="detail-row"><span>'+safe(title)+'</span><strong>'+safe(value==null||value===''?'Not available':value)+'</strong></div>';
  let html='<div class="parcel-heading"><span class="eyebrow">Selected tax lot</span><h2>'+safe(p.Address||'Unnamed tax lot')+'</h2><div>'+safe(boroughOf(b))+' · BBL '+safe(b)+'</div></div>';
  html+='<div class="chips">'+zones.map(z=>'<span class="chip">'+safe(z)+'</span>').join('');
@@ -220,7 +271,7 @@ async function inspectAt(latlng){
   const data=await request(apiLayer('lots'),{f:'geojson',where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',spatialRel:'esriSpatialRelIntersects',resultRecordCount:10},controller.signal,{priority:2});
   if(controller.signal.aborted||seq!==parcelLookupSeq)return;
   if(!data.features?.length)return notice('No mapped tax lot at this location.','warn');
-  inspect(data.features[0]);notice('Parcel information loaded.','good');
+  showParcelPreview(data.features[0],latlng,{fromLookup:true});
  }catch(e){if(e.name!=='AbortError'&&seq===parcelLookupSeq)notice('Parcel lookup failed: '+e.message,'error')}
 }
 async function lookupBBL(value){
