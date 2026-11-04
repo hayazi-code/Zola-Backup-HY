@@ -192,7 +192,7 @@ function inspect(f,{add=false}={}){
  DOM('property-toggle').onclick=()=>{toggleLot(f);inspect(f,{add:false})};
  DOM('property-zoom').onclick=()=>focusFeatures([f]);
  DOM('property-share').onclick=()=>shareLot(b);
- if(!add)showPanel('explore');
+ if(!add){showPanel('explore');window.ZOLA_MOBILE_OPEN?.();if(window.matchMedia('(max-width: 740px)').matches){requestAnimationFrame(()=>DOM('property-info')?.scrollIntoView({block:'start',behavior:'smooth'}))}}
 }
 function renderSelected(){
  const features=[...selected.values()],count=features.length;
@@ -286,7 +286,7 @@ function startDraw(type){
  if(drawTool)drawTool.disable();
  const options={shapeOptions:{color:'#e77825',weight:2,fillColor:'#f9b273',fillOpacity:.18}};
  drawTool=type==='rectangle'?new L.Draw.Rectangle(map,options):new L.Draw.Polygon(map,{...options,showArea:true,allowIntersection:false});
- drawTool.enable();notice('Draw a '+(type==='rectangle'?'rectangle':'polygon')+' on the map. Double-click to finish a polygon.','info');
+ drawTool.enable();window.ZOLA_MOBILE_COLLAPSE?.();notice('Draw a '+(type==='rectangle'?'rectangle':'polygon')+' on the map. Double-click to finish a polygon.','info');
 }
 async function selectByGeometry(feature){
  if(selectionBusy)return;
@@ -308,7 +308,7 @@ async function selectByGeometry(feature){
    completed+=result.reduce((n,d)=>n+(d.features?.length||0),0);
    DOM('selection-progress').textContent='Loaded '+FORMAT.format(completed)+' / '+FORMAT.format(all.length)+' lots';
   }
-  renderSelected();showPanel('selected');notice(FORMAT.format(completed)+' tax lots added to your selection.','good');
+  renderSelected();showPanel('selected');window.ZOLA_MOBILE_OPEN?.();notice(FORMAT.format(completed)+' tax lots added to your selection.','good');
  }catch(e){notice('Area selection failed: '+e.message,'error')}
  finally{selectionBusy=false;DOM('selection-progress').textContent=''}
 }
@@ -359,7 +359,7 @@ function start(){
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();window.setupLayerExplorer?.(map);bindControls();updateMapLegend();selectMode('inspect');renderSelected();
+ createLayers();window.setupLayerExplorer?.(map);bindControls();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();selectMode('inspect');renderSelected();
  map.on('moveend',refreshMap);
  map.on('click',e=>{if(drawTool?.enabled?.()||selectionBusy)return;inspectAt(e.latlng)});
  map.on('draw:created',e=>{if(drawTool)drawTool.disable();drawHighlight.clearLayers();drawHighlight.addLayer(e.layer);selectByGeometry(e.layer.toGeoJSON())});
