@@ -643,6 +643,7 @@ async function load(item){
   group.clearLayers();group.addData({type:'FeatureCollection',features:shown});
   if(item.id==='zma')group.bringToFront();
   activeLayersOnTop();
+  bringTransitForward();
   smallState(item,all.length>=3000?'Zoom for detail':shown.length+' shown',all.length>=3000?'warn':'good');
  }catch(e){if(ac.signal.aborted||e.name==='AbortError')return;group.clearLayers();smallState(item,'Unavailable','error');console.warn('ZoLa layer error',item.id,e)}
 }
