@@ -39,6 +39,12 @@ The same GitHub Pages URL adapts automatically to phones (screen width 740px or 
 
 The mobile layout has been structurally checked but still requires device-level visual and gesture testing across mobile browsers.
 
+## Reliability audit and regression testing
+
+See [AUDIT.md](AUDIT.md) for the Build 21 reliability/performance audit, fixes and limits. The browser now uses a common bounded GIS queue (5 concurrent requests), 14-second per-attempt timeout with one retry for transient errors, a 60-second capped LRU cache, and interactive parcel lookup priority. Mobile dense-viewport feature budgets are lower to reduce freezing; clipped views warn to zoom in. GitHub Actions runs offline JavaScript/queue regression tests. Actual live external GIS endpoint status must be checked from the browser diagnostic pages.
+
+In **About & data**, the app exposes GIS network requests, cache hits, retries, failures, and peak concurrency, plus a manual clear-cache button. Cache clearing does not remove chosen lots.
+
 ## How to use
 
 Click a property to inspect it. Open **Selected lots**, choose **Select by click** to add or remove many lots, or use Draw polygon or Draw rectangle. Zoom to level 16 or higher to view parcel boundaries. The selection need not be contiguous.
