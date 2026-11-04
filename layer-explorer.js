@@ -157,7 +157,11 @@ function makeLayer(item){
     const values=item.field?[p[item.field]]:Object.entries(p).filter(([k,v])=>v!=null&&typeof v!=='object'&&!/^(objectid|shape|globalid)/i.test(k)).slice(0,3).map(([k,v])=>k+': '+v);
     const text=values.filter(Boolean).map(String).join(' · ')||item.name;
     l.bindTooltip(sr(text.slice(0,250)),{sticky:true});
-    l.on('click',e=>{if(window.inspectAt)window.inspectAt(e.latlng)});
+    const rows=Object.entries(p).filter(([k,v])=>v!==null&&v!==undefined&&v!==''&&!/^(OBJECTID|GlobalID|Shape|FID)/i.test(k)&&typeof v!=='object').slice(0,12);
+    const content='<div class="feature-inspector"><strong>'+sr(item.name)+'</strong>'+
+       '<div class="feature-properties">'+rows.map(([k,v])=>'<div><span>'+sr(k)+'</span><b>'+sr(String(v).slice(0,150))+'</b></div>').join('')+'</div>'+
+       '<a target="_blank" rel="noopener" href="'+source(item)+'">Source metadata</a></div>';
+    l.bindPopup(content,{maxWidth:330,maxHeight:290,autoPanPadding:[20,20]});
    }
  });
 }
