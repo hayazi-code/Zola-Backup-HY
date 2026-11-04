@@ -11,7 +11,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const SERVICE='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/MapPLUTO/FeatureServer';
-const map=L.map('map').setView([40.69,-73.94],11);L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:20}).addTo(map);
+const map=L.map('map').setView([40.69,-73.94],11);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:20}).addTo(map);
 const selected=new Map(),selectionLayer=L.geoJSON(null,{style:{color:'#e88414',weight:2,fillOpacity:.35}}).addTo(map);
 const drawing=L.polyline([],{color:'#17669c',weight:3,dashArray:'5,5'}).addTo(map);
 let layer=null,mode='click',vertices=[];
