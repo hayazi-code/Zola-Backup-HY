@@ -26,6 +26,19 @@
 
 - All nested filter labels are displayed as independent wrapping rows to remain readable on narrow sidebars. **Deselect all layers** at the top of the map-layer list switches off core and optional overlays together, without clearing selected tax lots or changing the basemap.
 
+## Mobile interface
+
+The same GitHub Pages URL adapts automatically to phones (screen width 740px or less). The map occupies the screen with a collapsible bottom sheet. A short bar at the bottom offers **Search**, **Layers**, **Lots**, and **Map** actions; tap or swipe the sheet handle to expand or collapse controls.
+
+- **Search** opens the panel and focuses the address/BBL field. Tapping or searching a property opens MapPLUTO details in the panel.
+- **Layers** reveals the full ZoLa layer catalog; long sublayer names use individual wrapping rows.
+- **Lots** displays the selection workflow and data export. Starting polygon/rectangle drawing collapses the sheet to free the map; completing a selection opens the results.
+- **Map** collapses the panel without changing layer visibility, selected tax lots, or the current location.
+- Larger touch targets, independently scrolling sidebar, mobile search inputs, safe-area padding, and orientation-change map resizing are included.
+- Desktop layout remains the map with a right-hand sidebar; there is no separate mobile codebase or domain.
+
+The mobile layout has been structurally checked but still requires device-level visual and gesture testing across mobile browsers.
+
 ## How to use
 
 Click a property to inspect it. Open **Selected lots**, choose **Select by click** to add or remove many lots, or use Draw polygon or Draw rectangle. Zoom to level 16 or higher to view parcel boundaries. The selection need not be contiguous.
@@ -62,6 +75,7 @@ Zero-build static site designed for GitHub Pages:
 - `styles.css`: Responsive ZoLa-inspired styling.
 - `app.js`: GIS queries, parcel lookup, core interactive layers, drawing, exports, and scenario calculation.
 - `layer-explorer.js`: Grouped layer catalog with on-demand public ArcGIS viewport queries, per-layer state, metadata links, and basemap selection.
+- `mobile.js`: Phone-size bottom-sheet controls, quick navigation, mobile gestures, and responsive map resizing.
 - `diagnostics.html`: Browser-based core integration tests against live APIs.
 - `layer-diagnostics.html`: On-demand browser metadata and query tests for every configured ArcGIS service.
 
