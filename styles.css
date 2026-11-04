@@ -197,3 +197,101 @@
  .catalog-node[data-layer-id="pfirms2015"]>.catalog-children.catalog-grid-children,
  .catalog-node[data-layer-id="council"]>.catalog-children.catalog-grid-children{margin-left:22px}
 }
+
+
+/* V14: Structural one-column submenu layout, not a 3-column grid.
+   This applies to all nested menus and overrides legacy compact-grid rules. */
+#layer-tree .catalog-vertical-children{
+  display:block !important;
+  grid-template-columns:none !important;
+  columns:auto !important;
+  width:auto;
+  max-width:100%;
+  min-width:0;
+  margin:2px 12px 9px 27px !important;
+  padding:0 !important;
+  overflow:visible;
+}
+#layer-tree .catalog-vertical-children[hidden]{display:none !important}
+#layer-tree .catalog-vertical-children > .catalog-node{
+  display:block !important;
+  float:none !important;
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+#layer-tree .catalog-vertical-children > .catalog-node > .catalog-row{
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:flex-start !important;
+  flex-wrap:nowrap !important;
+  width:100% !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  min-height:26px;
+  padding:4px 2px !important;
+  box-sizing:border-box;
+}
+#layer-tree .catalog-vertical-children .catalog-label{
+  display:flex !important;
+  align-items:flex-start !important;
+  flex:1 1 0% !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  width:auto !important;
+  white-space:normal !important;
+  line-height:1.45 !important;
+  gap:7px !important;
+  font-size:11px !important;
+  cursor:pointer;
+}
+#layer-tree .catalog-vertical-children .catalog-label span{
+  display:block !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  overflow-wrap:anywhere !important;
+  white-space:normal !important;
+  word-break:normal !important;
+}
+#layer-tree .catalog-vertical-children .catalog-label input{
+  flex:0 0 13px !important;
+  min-width:13px !important;
+  width:13px !important;
+  height:13px !important;
+  margin:2px 0 0 !important;
+}
+#layer-tree .catalog-vertical-children .catalog-label .catalog-swatch{
+  display:inline-block !important;
+  flex:0 0 9px !important;
+  width:9px !important;
+  height:9px !important;
+  margin-top:3px;
+}
+#layer-tree .catalog-vertical-children .catalog-meta{
+  flex:0 0 auto !important;
+  min-width:0 !important;
+}
+#layer-tree .catalog-vertical-children .catalog-vertical-children{
+  margin-left:14px !important;
+  margin-right:4px !important;
+}
+#layer-tree .layer-options{flex-wrap:wrap;row-gap:8px}
+#layer-tree #layers-clear{
+  border:1px solid #a68bbf;
+  border-radius:3px;
+  background:#fff;
+  padding:7px 9px;
+  text-decoration:none;
+  font-size:11px;
+  font-weight:700;
+  color:#55307a;
+  white-space:normal;
+  text-align:center;
+}
+#layer-tree #layers-clear:hover,#layer-tree #layers-clear:focus-visible{background:#f2edf7}
+@media(max-width:740px){
+  #layer-tree .catalog-vertical-children{margin-left:22px !important;margin-right:8px !important}
+  #layer-tree .catalog-vertical-children .catalog-vertical-children{margin-left:10px !important}
+}
