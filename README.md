@@ -24,6 +24,8 @@
 - Share a parcel link with `?bbl=1000477501`.
 - Browser diagnostics that independently test each live data service.
 
+- All nested filter labels are displayed as independent wrapping rows to remain readable on narrow sidebars. **Deselect all layers** at the top of the map-layer list switches off core and optional overlays together, without clearing selected tax lots or changing the basemap.
+
 ## How to use
 
 Click a property to inspect it. Open **Selected lots**, choose **Select by click** to add or remove many lots, or use Draw polygon or Draw rectangle. Zoom to level 16 or higher to view parcel boundaries. The selection need not be contiguous.
