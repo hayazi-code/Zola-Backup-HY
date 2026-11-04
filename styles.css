@@ -679,3 +679,27 @@
  #map .parcel-preview-card h3{font-size:15px}
  #map .parcel-preview-details{min-height:44px;font-size:13px}
 }
+
+/* BUILD 30: opt-in location dot and recenter controls. */
+.geolocation-tools{
+ position:absolute;right:14px;bottom:32px;z-index:815;
+ display:flex;align-items:center;gap:7px;
+}
+.geolocation-tools button{
+ background:rgba(255,255,255,.97);color:#3e3351;border:1px solid #d9d2e0;border-radius:7px;
+ box-shadow:0 2px 9px #0002;padding:10px 12px;font-size:13px;font-weight:700;min-height:41px;
+}
+.geolocation-tools button.is-active{color:#145dc1;border-color:#8baedf;background:#f4f9ff}
+.geolocation-tools button:focus-visible{outline:3px solid #2f7de1;outline-offset:2px}
+.geolocation-tools button[hidden]{display:none!important}
+.user-location-icon{background:transparent;border:0;pointer-events:none!important}
+.user-location-dot{
+ display:block;width:18px;height:18px;margin:3px;border:3px solid #fff;border-radius:50%;
+ background:#257de2;box-shadow:0 0 0 1px #2071bc,0 2px 7px #0005;
+}
+@media(max-width:740px){
+ .geolocation-tools{right:10px;bottom:117px;gap:6px}
+ .geolocation-tools button{min-height:44px;padding:9px 12px;font-size:12px}
+ body.mobile-sheet-expanded .geolocation-tools{bottom:12px}
+ body.mobile-sheet-expanded .geolocation-tools #recenter-me{display:none}
+}
