@@ -16,7 +16,7 @@
 - The layer menu mirrors the provided **ZoLa section order and nesting**: Zoning and Land Use, Supporting Zoning Layers, Other Supporting Layers, Administrative Boundaries, and Basemaps. Child menus include C1–C8, M1–M3, R1–R10, C1/C2 overlays, flood-zone types, FRESH incentive types, landmark classes, Council district years, and aerial imagery years.
 - C1/C2 and district subtype checkboxes actually filter the core zoning geometry. FRESH uses DCP's `FRESH_Food_Stores` service with published Name categories. Pending map amendments use `nyzma` features with `STATUS = 'Certified'`, not all applications in earlier pre-certification stages.
 - The amendment timeline uses its `EFFECTIVE` field where present. The current `nyzma` dataset documents changes from 2002 onward, despite the ZoLa-style slider running from 1970-01 to 2028-11.
-- The **Basemaps** section has Transit (minimal OSM), Building Footprints (NYC cartographic tiles), 3D Buildings (unavailable), and Aerial Imagery (year choices). NYC public XYZ tiles are documented for 2018 and earlier; 2020, 2022, and 2024 are in the menu but disabled until a usable keyless service is verified.
+- The **Basemaps** section has Transit (minimal OSM), **Building Footprints (actual NYC OTI building polygons over a minimal OSM background)**, 3D Buildings (unavailable), and Aerial Imagery. Current aerial imagery uses Esri World Imagery. Earlier historic NYC imagery years remain selectable where documented, with an automatic fallback to current imagery on tile errors. Years 2020, 2022, and 2024 remain disabled until a usable keyless service is verified.
 - Nonworking/specialized layers are **explicitly labeled Not linked**. Some connected category filters, such as the precise parking subareas and landmark classifications, still require validation against published feature fields.
 - Select **noncontiguous** tax lots by clicking, drawing polygons, or drawing rectangles. Tax lots are identified by their full NYC BBL.
 - Summarize total mapped lot area and primary zoning districts; zoom to the selected lots; export complete selection to CSV.
@@ -50,7 +50,7 @@ Base URL: `https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/`
 
 Address search: `https://geosearch.planninglabs.nyc/v2/`
 
-Basemap: OpenStreetMap public tile service, with attribution. This is suited to modest usage, **not a high-traffic hosted deployment**. At scale, use a production tile provider or self-hosted tiles.
+Basemap: OpenStreetMap for transit/building context, Esri World Imagery for current aerial imagery, and experimental NYC historical XYZ imagery URLs where documented; all with provider attribution. This is suited to modest usage, **not a high-traffic hosted deployment**. At scale, use a production tile provider or self-hosted tiles.
 
 ## Technical design
 
@@ -80,7 +80,8 @@ Map rendering uses Leaflet 1.9.4; geometry drawing uses Leaflet.draw 1.0.4. ArcG
 - No 3D development-envelope simulator is implemented yet.
 - The ZoLa-style menu is now structurally aligned with the supplied screenshots; exact service parity is not achieved. In particular: ZoLa's 3D buildings, 2015 preliminary flood maps, Zoning for Accessibility, Appendix I, Appendix J, Battery Park City polygon, and historic 2013–2023 City Council map are not all independently connected.
 - Parks are represented by the publicly available `v_GFT_Open_Spaces` planning-screening service, which is not the legal inventory of NYC parklands.
-- The initial Transit basemap is a subdued OpenStreetMap street map; it is not yet ZoLa's transit styling. NYC cartographic tiles include building drawings, but the Building Footprints basemap is not yet a standalone vector footprints overlay.
+- Transit remains a subdued OpenStreetMap street map, not ZoLa's official transit styling. Building Footprints now draws actual polygons from the public NYC OTI `NYC_Building_Footprint/FeatureServer/0` service. These are fetched only at zoom level 16 or closer to reduce load.
+- Current aerial imagery has no fixed acquisition year. Esri World Imagery varies by location. Historic NYC aerials may require access even when archived XYZ endpoints are documented. A failed tile request automatically reverts to current imagery, but an HTTP-successful provider watermark or other provider-specific issue may still require investigation.
 - Base map and zoning visual style are inspired by, not an exact reproduction of, official ZoLa.
 
 ## Official sources and references
