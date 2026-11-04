@@ -238,7 +238,7 @@ function buildBasemaps(){
  const group=document.createElement('details');group.className='layer-group';group.open=true;
  const summary=document.createElement('summary');summary.textContent='Basemaps and transit';
  const count=document.createElement('small');count.textContent='4';summary.append(count);group.append(summary);
- const body=document.createElement('div');body.className='layer-group-items';group.append(body);
+ const body=document.createElement('div');body.className='layer-group-items basemap-controls-body';group.append(body);
  const explanation=document.createElement('p');explanation.className='basemap-note';
  explanation.textContent='Independent checkboxes. Street map stays underneath; switch transit, building footprints, and aerial imagery on or off together or separately.';
  body.append(explanation);
@@ -367,15 +367,28 @@ const SUBWAY_FALLBACK={
  routes:'https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/SubwayLines_share/FeatureServer/0/query',
  stations:'https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/SubwayStations_share/FeatureServer/0/query'
 };
-const SUBWAY_COLORS={'1':'#EE352E','2':'#EE352E','3':'#EE352E','4':'#00933C','5':'#00933C','6':'#00933C','7':'#B933AD','A':'#0039A6','C':'#0039A6','E':'#0039A6','B':'#FF6319','D':'#FF6319','F':'#FF6319','M':'#FF6319','G':'#6CBE45','J':'#996633','Z':'#996633','L':'#A7A9AC','N':'#FCCC0A','Q':'#FCCC0A','R':'#FCCC0A','W':'#FCCC0A','S':'#808183'};
+// Official MTA Brand Colors (2026), not older legacy subway-signage hex codes.
+// https://www.mta.info/document/168976 and https://data.ny.gov/d/3uhz-sej2
+const SUBWAY_COLORS=Object.freeze({
+ '1':'#D82233','2':'#D82233','3':'#D82233',
+ '4':'#009952','5':'#009952','6':'#009952',
+ '7':'#9A38A1',
+ 'A':'#0062CF','C':'#0062CF','E':'#0062CF',
+ 'B':'#EB6800','D':'#EB6800','F':'#EB6800','M':'#EB6800',
+ 'G':'#799534','J':'#8E5C33','Z':'#8E5C33',
+ 'L':'#7C858C','N':'#F6BC26','Q':'#F6BC26','R':'#F6BC26','W':'#F6BC26',
+ 'S':'#7C858C','T':'#008EB7'
+});
 function transitStatus(message,kind=''){
  const out=el('transit-layer-status');if(out){out.textContent=message;out.dataset.kind=kind}
 }
 function subwayColor(feature){
  const p=feature.properties||{};
- const raw=String(p.short_name||p.route_short_name||p.route_id||p.route||'').toUpperCase().trim();
- const first=raw.match(/[A-Z0-9]+/)?.[0]||'';
- return SUBWAY_COLORS[first]||'#547b9d';
+ const raw=String(p.short_name||p.route_short_name||p.route||p.route_id||'').toUpperCase().trim();
+ const first=raw.match(/^[1-7AC E BDFMGJZLNQRWST]/)?.[0]?.trim()||raw.match(/^[A-Z0-9]+/)?.[0]||'';
+ const color=String(p.color||'').trim().replace(/^#/,'');
+ const sourceColor=/^[0-9A-Fa-f]{6}$/.test(color)?'#'+color.toUpperCase():null;
+ return SUBWAY_COLORS[first]||sourceColor||'#547b9d';
 }
 function ensureTransitLayers(){
  if(state.transitLayers.routes&&state.transitLayers.stations)return;
@@ -390,9 +403,10 @@ function ensureTransitLayers(){
  state.transitLayers.stations=L.geoJSON(null,{
   pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:map.getZoom()>=15?6:4.5,color:'#25354d',weight:1.6,fillColor:'#ffffff',fillOpacity:1}),
   onEachFeature:(f,l)=>{
-   const p=f.properties||{},name=p.stop_name||p.station_name||p.name||'Subway station';
+   const p=f.properties||{},name=String(p.stop_name||p.station_name||p.name||'Subway station').trim();
    l.bindPopup('<strong>'+sr(name)+'</strong><br>NYC subway station');
-   l.bindTooltip(sr(name),{sticky:true});
+   // Permanent station names at neighborhood zooms, not hover-only tooltips.
+   l.bindTooltip(sr(name),{permanent:map.getZoom()>=14,sticky:false,direction:'right',offset:[7,0],opacity:.94,className:'subway-station-label'});
   }
  });
 }
@@ -458,6 +472,17 @@ async function loadTransit(){
    }
    if(primaryError&&!features.length)throw primaryError;
    if(controller.signal.aborted||token!==state.transitLoadToken||!state.overlays.transit||!state.subway[kind])return;
+   // GTFS station point feeds sometimes contain several platform stops at the same station.
+   // Remove co-located duplicate labels while preserving distinct station names.
+   if(kind==='stations'){
+    const seen=new Set();
+    features=features.filter(f=>{
+     const p=f.properties||{},coords=f.geometry?.coordinates||[];
+     const label=String(p.stop_name||p.station_name||p.name||'').trim().toLowerCase();
+     const key=label+'|'+(Number(coords[0])||0).toFixed(3)+'|'+(Number(coords[1])||0).toFixed(3);
+     if(seen.has(key))return false;seen.add(key);return true;
+    });
+   }
    layer.clearLayers();layer.addData({type:'FeatureCollection',features});
    results[kind]={count:features.length,source};
   }catch(e){
