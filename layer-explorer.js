@@ -96,9 +96,9 @@ const VERIFIED_YEARS=new Set(['2018','2016','2014','2012','2010','2008','2006','
 const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0};
 const el=id=>document.getElementById(id),sr=(a)=>String(a??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const baseOptions={
-  minimal:{name:'Minimal grayscale',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attribution:'&copy; OpenStreetMap contributors',className:'base-minimal',maxNativeZoom:19},
-  nyc:{name:'NYC cartographic',url:'https://maps.nyc.gov/xyz/1.0.0/carto/basemap/{z}/{x}/{y}.jpg',labelUrl:'https://maps.nyc.gov/xyz/1.0.0/carto/label/{z}/{x}/{y}.png8',attribution:'&copy; City of New York',className:'base-nyc',maxNativeZoom:19},
-  aerial:{name:'NYC aerial (2018)',url:'https://maps.nyc.gov/xyz/1.0.0/photo/2018/{z}/{x}/{y}.png8',labelUrl:'https://maps.nyc.gov/xyz/1.0.0/carto/label-lt/{z}/{x}/{y}.png8',attribution:'&copy; City of New York, 2018 orthophotography',className:'base-aerial',maxNativeZoom:19}
+ transit:{name:'Transit',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attribution:'&copy; OpenStreetMap contributors',maxNativeZoom:19},
+ buildings:{name:'Building Footprints',url:'https://maps.nyc.gov/xyz/1.0.0/carto/basemap/{z}/{x}/{y}.jpg',labelUrl:'https://maps.nyc.gov/xyz/1.0.0/carto/label/{z}/{x}/{y}.png8',attribution:'&copy; City of New York',maxNativeZoom:19},
+ aerial:{name:'Aerial Imagery',attribution:'&copy; City of New York imagery',maxNativeZoom:19}
 };
 function smallState(item,value,kind=''){
  const s=el('extra-status-'+item.id);
@@ -243,26 +243,32 @@ function buildBasemaps(){
 }
 function filter(){
  const q=el('layer-search').value.trim().toLowerCase();
- for(const row of document.querySelectorAll('.catalog-row[data-search]'))row.hidden=!row.dataset.search.includes(q);
  for(const group of document.querySelectorAll('.layer-group')){
-  const rows=[...group.querySelectorAll('.catalog-row[data-search]')];
-  if(!rows.length)continue;
-  const found=rows.some(row=>!row.hidden);
-  group.hidden=q!==''&&!found;
-  if(q&&found)group.open=true;
+  const nodes=[...group.querySelectorAll('.catalog-node')].reverse();
+  for(const n of nodes){
+   const self=String(n.dataset.search||'').includes(q);
+   const childMatch=!!n.querySelector('.catalog-node:not([hidden])');
+   n.hidden=Boolean(q)&&!self&&!childMatch;
+   if(q&&!n.hidden){const child=n.querySelector(':scope > .catalog-children');if(child)child.hidden=false}
+  }
+  const rows=group.querySelectorAll('.basemap-row,.aerial-year');
+  if(rows.length){for(const r of rows)r.hidden=!!q&&!r.textContent.toLowerCase().includes(q)}
+  group.hidden=!!q&&![...group.querySelectorAll('.catalog-node,.basemap-row,.aerial-year')].some(n=>!n.hidden);
+  if(q&&!group.hidden)group.open=true;
  }
 }
 function setBasemap(id){
  const def=baseOptions[id];if(!def||!state.map)return;
  const map=state.map;
- // Remove the initial tile layer or any previous selected basemap without touching overlays.
- map.eachLayer(l=>{if(l instanceof L.TileLayer){map.removeLayer(l)}});
- const layer=L.tileLayer(def.url,{attribution:def.attribution,maxZoom:20,maxNativeZoom:def.maxNativeZoom,updateWhenIdle:true}).addTo(map);
- layer.bringToBack();
- if(def.labelUrl)L.tileLayer(def.labelUrl,{attribution:def.attribution,maxNativeZoom:def.maxNativeZoom,maxZoom:20,updateWhenIdle:true}).addTo(map);
+ map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});
+ const year=state.aerialYear||'2018';
+ const url=id==='aerial'?'https://maps.nyc.gov/xyz/1.0.0/photo/'+year+'/{z}/{x}/{y}.png8':def.url;
+ const base=L.tileLayer(url,{attribution:id==='aerial'?'&copy; City of New York, '+year+' imagery':def.attribution,maxZoom:20,maxNativeZoom:def.maxNativeZoom,updateWhenIdle:true}).addTo(map);
+ base.bringToBack();
+ if(def.labelUrl||id==='aerial')L.tileLayer(id==='aerial'?'https://maps.nyc.gov/xyz/1.0.0/carto/label-lt/{z}/{x}/{y}.png8':def.labelUrl,{attribution:def.attribution,maxNativeZoom:19,maxZoom:20,updateWhenIdle:true}).addTo(map);
  map.getContainer().dataset.basemap=id;
- const key=document.querySelector('.map-key');if(key)key.style.background=id==='aerial'?'#ffffffed':'';
- state.tiles=layer;
+ const key=document.querySelector('.map-key');if(key)key.style.background=id==='aerial'?'#ffffffec':'';
+ state.tiles=base;
 }
 function styleFor(item,f){
  const col=item.color||'#7e6a99', geom=f.geometry?.type||'';
