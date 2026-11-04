@@ -154,3 +154,7 @@ The transit line color mapping follows the published [MTA Brand Colors](https://
 Station names are now permanent on-map Leaflet tooltip labels from zoom level 13 onward when **Subway stations** is checked; at more distant zoom levels they remain hover-visible. Nearby duplicate platform records with the same name and coordinates rounded to 0.001° are deduplicated to reduce visual clutter. The Basemaps and transit menu has explicit inner gutters on both desktop and mobile.
 
 Transit geometry is from a historic public GIS service; route placement and service changes may not match current MTA operations. This is not live MTA service data.
+
+## Build 20: LIRR lines and stations
+
+The **Basemaps and transit** section includes a **Long Island Rail Road** checkbox, with independent **LIRR lines** and **LIRR stations** child switches. They start off until enabled; the subway remains independent. The data come from the public regional `New_York_City_Region_Transit_Layers/FeatureServer`: line layer **7** and stop layer **1**. The track colors use the data provider's per-route `color` field (validated six-character RGB hex) with a default teal only where no valid color is provided. The station markers display permanent names at neighborhood zoom 13+, with duplicate platform coordinates deduplicated to reduce clutter. Controls work with the existing mobile bottom sheet. The diagnostics page includes source checks for both LIRR layers. This is public GIS data, not live MTA train status or service schedules.
