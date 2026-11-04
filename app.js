@@ -45,9 +45,9 @@ const fmt=v=>Number.isFinite(Number(v))&&v!==''&&v!=null?FORMAT.format(Number(v)
 const bblOf=f=>{const p=f?.properties||f||{};if(p.BBL==null)return '';return String(Math.trunc(Number(p.BBL))).padStart(10,'0')};
 const boroughOf=b=>({'1':'Manhattan','2':'Bronx','3':'Brooklyn','4':'Queens','5':'Staten Island'})[String(b)[0]]||'NYC';
 const apiLayer=key=>SERVICE_ROOT+URLS[key]+'/FeatureServer/0/query';
-let map,mode='inspect',drawTool=null,drawHighlight,inspectLayer;
-const visibleLayers={},layerGroups={},requests={};
-let currentParcel=null,selected=new Map(),searchTimer=null,searchSeq=0,loadTimer=null,selectionBusy=false;
+let map,inspectLayer;
+const layerGroups={},requests={};
+let currentParcel=null,searchTimer=null,searchSeq=0,loadTimer=null;
 let parcelLookupSeq=0,parcelLookupController=null;
 const flags={zoning:true,commercial:false,special:false,subdistrict:false,mih:false,lots:true,landuse:false};
 let toggleToken=0;
@@ -88,7 +88,7 @@ function createLayers(){
    style:layerStyles[key],
    onEachFeature:(f,l)=>{
     if(key!=='lots')l.bindTooltip(safe(featureLabel(key,f.properties||{})),{sticky:!(key==='zoning'&&map.getZoom()>=15),permanent:key==='zoning'&&map.getZoom()>=15,direction:key==='zoning'?'center':'top',className:key==='zoning'?'zoning-label':'district-tip'});
-    if(key==='lots')l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);inspect(f,{add:mode==='select'})});
+    if(key==='lots')l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);inspect(f)});
     else l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);inspectAt(e.latlng)});
    }
   });
@@ -96,10 +96,8 @@ function createLayers(){
  // Ordering matters: zoning below thematic overlays and selectable lot outlines.
  for(const key of Object.keys(URLS))layerGroups[key].addTo(map);
  inspectLayer=L.geoJSON(null,{style:{color:'#4b277e',weight:3,fillColor:'#8b6bb7',fillOpacity:.16},interactive:false}).addTo(map);
- visibleLayers.selected=L.geoJSON(null,{style:{color:'#e77620',weight:2.6,fillColor:'#fba952',fillOpacity:.35},interactive:false}).addTo(map);
- drawHighlight=L.featureGroup().addTo(map);
 }
-function bringHighlights(){layerGroups.lots.bringToFront();visibleLayers.selected.bringToFront();inspectLayer.bringToFront();drawHighlight.bringToFront()}
+function bringHighlights(){layerGroups.lots.bringToFront();inspectLayer.bringToFront()}
 window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS=()=>bringHighlights();
 function checkLayer(key){return key==='lots'?(flags.lots||flags.landuse):flags[key]}
 async function refreshLayer(key){
@@ -168,17 +166,10 @@ function onFlagsChange(){
  updateMapLegend();
  refreshMap();
 }
-function selectMode(value){mode=value;DOM('inspect-mode').classList.toggle('active',mode==='inspect');DOM('select-mode').classList.toggle('active',mode==='select');notice(mode==='select'?'Selection mode: click lots to add or remove them.':'Inspect mode: click a lot to see its details.')}
-function showPanel(tab){
- for(const name of ['explore','selected','scenario']){DOM('tab-'+name).classList.toggle('active',name===tab);DOM('panel-'+name).hidden=(name!==tab)}
- if(tab==='selected')renderSelected();
-}
-function toggleLot(f){const b=bblOf(f);if(!b)return notice('This feature has no BBL identifier.','warn');if(selected.has(b))selected.delete(b);else selected.set(b,f);renderSelected()}
-function inspect(f,{add=false}={}){
+function inspect(f){
  currentParcel=f;
  const p=f.properties||{},b=bblOf(f),zones=[p.ZoneDist1,p.ZoneDist2,p.ZoneDist3,p.ZoneDist4].filter(Boolean);
  inspectLayer.clearLayers();inspectLayer.addData(f);bringHighlights();
- if(add)toggleLot(f);
  const row=(title,value)=>'<div class="detail-row"><span>'+safe(title)+'</span><strong>'+safe(value==null||value===''?'Not available':value)+'</strong></div>';
  let html='<div class="parcel-heading"><span class="eyebrow">Selected tax lot</span><h2>'+safe(p.Address||'Unnamed tax lot')+'</h2><div>'+safe(boroughOf(b))+' · BBL '+safe(b)+'</div></div>';
  html+='<div class="chips">'+zones.map(z=>'<span class="chip">'+safe(z)+'</span>').join('');
@@ -187,39 +178,16 @@ function inspect(f,{add=false}={}){
  html+='<h4>Tax lot and buildings</h4>'+row('BBL',b)+row('Block / lot',p.Block+' / '+p.Lot)+row('Lot area (sq ft)',fmt(p.LotArea))+row('Building area (sq ft)',fmt(p.BldgArea))+row('Buildings',fmt(p.NumBldgs))+row('Floors',p.NumFloors)+row('Residential units',fmt(p.UnitsRes))+row('Total units',fmt(p.UnitsTotal))+row('Year built',p.YearBuilt);
  html+='<h4>Reported FAR values (MapPLUTO)</h4>'+row('Built FAR',p.BuiltFAR)+row('Residential FAR',p.ResidFAR)+row('Commercial FAR',p.CommFAR)+row('Community facility FAR',p.FacilFAR);
  html+='<p class="small-note">FAR fields are MapPLUTO attributes, not a definitive zoning entitlement. Verify district rules and special conditions.</p>';
- html+='<div class="action-row"><button id="property-toggle" class="primary">'+(selected.has(b)?'Remove from selection':'+ Add to selection')+'</button><button id="property-zoom">Zoom to lot</button><button id="property-share">Share</button></div>';
+ html+='<div class="action-row"><button id="property-zoom">Zoom to lot</button><button id="property-share">Share</button></div>';
  html+='<p class="source-line">MapPLUTO version: '+safe(p.Version||'unspecified')+' · <a target="_blank" rel="noopener" href="https://zola.planning.nyc.gov/bbl/'+encodeURIComponent(b)+'">Official ZoLa</a></p>';
  DOM('property-info').innerHTML=html;
- DOM('property-toggle').onclick=()=>{toggleLot(f);inspect(f,{add:false})};
  DOM('property-zoom').onclick=()=>focusFeatures([f]);
  DOM('property-share').onclick=()=>shareLot(b);
- if(!add){showPanel('explore');window.ZOLA_MOBILE_OPEN?.();if(window.matchMedia('(max-width: 740px)').matches){requestAnimationFrame(()=>DOM('property-info')?.scrollIntoView({block:'start',behavior:'smooth'}))}}
-}
-function renderSelected(){
- const features=[...selected.values()],count=features.length;
- DOM('selection-count').textContent=FORMAT.format(count);
- const area=features.reduce((n,f)=>n+(Number(f.properties?.LotArea)||0),0);
- DOM('selection-area').textContent=FORMAT.format(area)+' sq ft';
- const zoning={};for(const f of features){const z=f.properties?.ZoneDist1||'Unknown';zoning[z]=(zoning[z]||0)+1}
- DOM('selection-zones').textContent=Object.keys(zoning).length||'0';
- const list=DOM('selected-list');list.innerHTML='';
- for(const f of features.slice(0,250)){
-  const b=bblOf(f),p=f.properties||{},row=document.createElement('div');
-  row.className='selection-entry';row.innerHTML='<div><strong>'+safe(p.Address||b)+'</strong><small>BBL '+safe(b)+' · '+safe(p.ZoneDist1||'Zone unavailable')+'</small></div>';
-  const btn=document.createElement('button');btn.type='button';btn.textContent='Remove';btn.onclick=()=>{selected.delete(b);renderSelected()};
-  row.appendChild(btn);row.firstChild.onclick=()=>{inspect(f);focusFeatures([f])};list.appendChild(row);
- }
- if(count>250)list.insertAdjacentHTML('beforeend','<p class="small-note">Showing first 250 of '+FORMAT.format(count)+' lots. CSV includes all.</p>');
- visibleLayers.selected.clearLayers();if(count)visibleLayers.selected.addData({type:'FeatureCollection',features});bringHighlights();
- DOM('selection-summary').textContent=count?Object.entries(zoning).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([z,n])=>z+': '+n).join(' · '):'No lots selected';
- updateScenario();
- if(currentParcel){
-  const btn=DOM('property-toggle');if(btn)btn.textContent=selected.has(bblOf(currentParcel))?'Remove from selection':'+ Add to selection';
- }
+ window.ZOLA_MOBILE_OPEN?.();
+ if(window.matchMedia('(max-width: 740px)').matches)requestAnimationFrame(()=>DOM('property-info')?.scrollIntoView({block:'start',behavior:'smooth'}));
 }
 function focusFeatures(features){if(!features.length)return;const b=L.geoJSON({type:'FeatureCollection',features}).getBounds();if(b.isValid())map.fitBounds(b.pad(.5),{maxZoom:18})}
 async function inspectAt(latlng){
- if(selectionBusy)return;
  const seq=++parcelLookupSeq;
  parcelLookupController?.abort();
  const controller=new AbortController();parcelLookupController=controller;
@@ -229,7 +197,7 @@ async function inspectAt(latlng){
   const data=await request(apiLayer('lots'),{f:'geojson',where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',spatialRel:'esriSpatialRelIntersects',resultRecordCount:10},controller.signal,{priority:2});
   if(controller.signal.aborted||seq!==parcelLookupSeq)return;
   if(!data.features?.length)return notice('No mapped tax lot at this location.','warn');
-  inspect(data.features[0],{add:mode==='select'});notice('Parcel information loaded.','good');
+  inspect(data.features[0]);notice('Parcel information loaded.','good');
  }catch(e){if(e.name!=='AbortError'&&seq===parcelLookupSeq)notice('Parcel lookup failed: '+e.message,'error')}
 }
 async function lookupBBL(value){
@@ -292,56 +260,6 @@ async function runSearch(){
   await pickAddress(data.features[0]);
  }catch(e){notice('Address search failed: '+e.message,'error')}
 }
-function startDraw(type){
- if(!window.L.Draw)return notice('Drawing library did not load. Refresh and try again.','error');
- if(drawTool)drawTool.disable();
- const options={shapeOptions:{color:'#e77825',weight:2,fillColor:'#f9b273',fillOpacity:.18}};
- drawTool=type==='rectangle'?new L.Draw.Rectangle(map,options):new L.Draw.Polygon(map,{...options,showArea:true,allowIntersection:false});
- drawTool.enable();window.ZOLA_MOBILE_COLLAPSE?.();notice('Draw a '+(type==='rectangle'?'rectangle':'polygon')+' on the map. Double-click to finish a polygon.','info');
-}
-async function selectByGeometry(feature){
- if(selectionBusy)return;
- selectionBusy=true;DOM('selection-progress').textContent='Finding intersecting lots…';
- const geom=feature.geometry;
- const esri={rings:geom.coordinates,spatialReference:{wkid:4326}};
- const filter={where:'1=1',geometry:JSON.stringify(esri),geometryType:'esriGeometryPolygon',spatialRel:'esriSpatialRelIntersects',inSR:4326};
- try{
-  const ids=await request(apiLayer('lots'),{f:'json',...filter,returnIdsOnly:true,returnGeometry:false});
-  const all=ids.objectIds||[];
-  if(!all.length){notice('No tax lots intersect the drawn area.','warn');return}
-  if(all.length>15000){notice(FORMAT.format(all.length)+' lots intersect the drawing. Divide the area for browser performance.','warn');return}
-  DOM('selection-progress').textContent='Loading '+FORMAT.format(all.length)+' lots…';
-  const batches=[];for(let i=0;i<all.length;i+=150)batches.push(all.slice(i,i+150));
-  let completed=0;
-  for(let i=0;i<batches.length;i+=4){
-   const result=await Promise.all(batches.slice(i,i+4).map(ids=>request(apiLayer('lots'),{f:'geojson',where:'1=1',objectIds:ids.join(','),outFields:'*',outSR:4326,returnGeometry:true})));
-   for(const data of result)for(const f of data.features||[]){const b=bblOf(f);if(b)selected.set(b,f)}
-   completed+=result.reduce((n,d)=>n+(d.features?.length||0),0);
-   DOM('selection-progress').textContent='Loaded '+FORMAT.format(completed)+' / '+FORMAT.format(all.length)+' lots';
-  }
-  renderSelected();showPanel('selected');window.ZOLA_MOBILE_OPEN?.();notice(FORMAT.format(completed)+' tax lots added to your selection.','good');
- }catch(e){notice('Area selection failed: '+e.message,'error')}
- finally{selectionBusy=false;DOM('selection-progress').textContent=''}
-}
-function csvCell(v){
- let s=String(v??'');if(/^[\s]*[=+\-@]/.test(s))s="'"+s;
- return '"'+s.replace(/"/g,'""')+'"';
-}
-function exportSelection(){
- if(!selected.size)return notice('Select one or more lots before exporting.','warn');
- const headers=['BBL','Address','Borough','Block','Lot','LotArea','ZoneDist1','ZoneDist2','Overlay1','SPDist1','LandUse','BldgArea','BuiltFAR','ResidFAR','CommFAR','FacilFAR','UnitsRes','Version'];
- const lines=[headers.join(','),...[...selected.values()].map(f=>headers.map(k=>csvCell(k==='BBL'?bblOf(f):f.properties?.[k])).join(','))];
- const u=URL.createObjectURL(new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}));
- const a=document.createElement('a');a.href=u;a.download='zola-backup-selected-lots.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);
- notice('CSV exported with '+FORMAT.format(selected.size)+' lots.','good');
-}
-function updateScenario(){
- const area=[...selected.values()].reduce((n,f)=>n+(Number(f.properties?.LotArea)||0),0);
- const far=Number(DOM('assumed-far')?.value||0);
- DOM('scenario-area').textContent=fmt(area)+' sq ft';
- DOM('scenario-floor').textContent=Number.isFinite(far)&&far>=0?fmt(area*far)+' sq ft':'Enter a valid FAR';
- DOM('scenario-count').textContent=selected.size;
-}
 async function shareLot(b){
  const u=new URL(location.href);u.searchParams.set('bbl',b);
  try{await navigator.clipboard.writeText(u.href);notice('Property link copied.','good')}
@@ -357,12 +275,6 @@ function bindControls(){
  for(const key of Object.keys(flags)){const input=DOM('layer-'+key);if(input)input.onchange=onFlagsChange}
  DOM('search-button').onclick=runSearch;DOM('search').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}if(e.key==='Escape')DOM('suggestions').hidden=true};
  DOM('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(autocomplete,350)};
- DOM('tab-explore').onclick=()=>showPanel('explore');DOM('tab-selected').onclick=()=>showPanel('selected');DOM('tab-scenario').onclick=()=>showPanel('scenario');
- DOM('inspect-mode').onclick=()=>selectMode('inspect');DOM('select-mode').onclick=()=>selectMode('select');
- DOM('draw-polygon').onclick=()=>startDraw('polygon');DOM('draw-rectangle').onclick=()=>startDraw('rectangle');
- DOM('export').onclick=exportSelection;DOM('clear').onclick=()=>{selected.clear();renderSelected();notice('Selection cleared.','info')};
- DOM('zoom-selection').onclick=()=>focusFeatures([...selected.values()]);
- DOM('assumed-far').oninput=updateScenario;
  DOM('home').onclick=()=>map.fitBounds([[40.49,-74.27],[40.94,-73.68]]);
  const boroughs={manhattan:[40.756,-73.98,14],bronx:[40.846,-73.888,13],brooklyn:[40.674,-73.95,14],queens:[40.736,-73.81,13],staten:[40.584,-74.148,13]};
  for(const [name,[lat,lng,zoom]] of Object.entries(boroughs))DOM('goto-'+name).onclick=()=>map.setView([lat,lng],zoom);
@@ -378,10 +290,9 @@ function start(){
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();window.setupLayerExplorer?.(map);bindControls();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();selectMode('inspect');renderSelected();
+ createLayers();window.setupLayerExplorer?.(map);bindControls();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
  map.on('moveend',refreshMap);
- map.on('click',e=>{if(drawTool?.enabled?.()||selectionBusy)return;inspectAt(e.latlng)});
- map.on('draw:created',e=>{if(drawTool)drawTool.disable();drawHighlight.clearLayers();drawHighlight.addLayer(e.layer);selectByGeometry(e.layer.toGeoJSON())});
+ map.on('click',e=>inspectAt(e.latlng));
  const url=new URL(location.href),bbl=url.searchParams.get('bbl');if(bbl)lookupBBL(bbl);
  refreshMap();
  notice('Ready. Search an address or click a tax lot. Zoom in for lot boundaries.','good');
