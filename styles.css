@@ -443,3 +443,74 @@
 /* Visible build number to diagnose stale GitHub Pages deployments. */
 .build-badge{font:750 10px/1.2 system-ui,sans-serif;background:#74519b;color:white;border:1px solid #ac95cb;border-radius:4px;padding:5px 7px;letter-spacing:.02em;white-space:nowrap}
 @media(max-width:740px){.build-badge{font-size:9px;padding:4px 5px}}
+
+/* V19: inner gutters for Basemaps and transit; independent of desktop/mobile panel padding. */
+#layer-tree .basemap-controls-body{
+  padding:10px 17px 18px!important;
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+#layer-tree .basemap-controls-body>.basemap-note{
+  padding:6px 5px 11px!important;
+  margin:0!important;
+  line-height:1.55;
+  overflow-wrap:anywhere;
+}
+#layer-tree .basemap-controls-body>.basemap-row{
+  padding:8px 7px!important;
+  margin:0!important;
+  min-height:40px;
+  border-radius:5px;
+}
+#layer-tree .basemap-controls-body>.basemap-child-options{
+  padding:6px 8px 12px 20px!important;
+  margin:0!important;
+}
+#layer-tree .basemap-controls-body>.aerial-year-grid{
+  padding:9px 6px 12px 20px!important;
+  margin:0!important;
+  gap:9px 7px;
+}
+#layer-tree .basemap-controls-body>#basemap-status{
+  margin:9px 3px 0!important;
+  padding:10px 11px!important;
+  max-width:calc(100% - 6px);
+  overflow-wrap:anywhere;
+}
+#layer-tree .basemap-controls-body .aerial-year{
+  min-width:0;
+  padding:3px 0;
+}
+#layer-tree .basemap-controls-body .basemap-child input{
+  margin:0;
+}
+.leaflet-tooltip.subway-station-label{
+  background:rgba(255,255,255,.94)!important;
+  border:1px solid rgba(77,78,88,.2)!important;
+  color:#283449!important;
+  border-radius:3px!important;
+  box-shadow:0 1px 3px rgba(0,0,0,.15)!important;
+  padding:2px 5px!important;
+  font:650 11px/1.22 system-ui,-apple-system,"Segoe UI",sans-serif!important;
+  white-space:nowrap;
+  pointer-events:none!important;
+  text-shadow:0 1px 0 #fff;
+}
+.leaflet-tooltip.subway-station-label:before{display:none!important}
+@media(max-width:740px){
+ #layer-tree .basemap-controls-body{
+  padding:11px 17px 20px!important;
+ }
+ #layer-tree .basemap-controls-body>.basemap-row{
+  padding:10px 7px!important;
+  min-height:46px;
+ }
+ #layer-tree .basemap-controls-body>.basemap-child-options{
+  padding-left:15px!important;
+ }
+ #layer-tree .basemap-controls-body>.aerial-year-grid{
+  padding-left:14px!important;
+ }
+ .leaflet-tooltip.subway-station-label{font-size:10px!important;padding:2px 4px!important}
+}
