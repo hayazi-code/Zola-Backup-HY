@@ -114,7 +114,7 @@ function build(){
  quick.innerHTML='<div class="eyebrow">Show zoning and related data on map</div>'+
   '<input id="layer-search" type="search" placeholder="Filter map layers…" aria-label="Filter map layers" autocomplete="off">'+
   '<div class="layer-options"><label><input type="checkbox" id="labels-on" checked> Zoning labels</label>'+
-  '<button id="layers-clear" type="button">Hide optional layers</button></div>';
+  '<button id="layers-clear" type="button" aria-label="Deselect all map layers">Deselect all layers</button></div>';
  host.appendChild(quick);
  for(const group of GROUPS){
   const details=document.createElement('details');details.className='layer-group';details.open=group.name==='Zoning and Land Use'||group.name==='Supporting Zoning Layers';
@@ -130,11 +130,31 @@ function build(){
  footer.textContent='Layers follow the official ZoLa menu hierarchy. '+unlinked+' entries are explicitly marked Not linked. Source-dependent categories need verification for exact styling and subarea filters.';
  host.append(footer);
  el('layer-search').oninput=filter;
- el('layers-clear').onclick=()=>{
-  for(const item of ITEMS){if(item.core&&!['zoning','lots'].includes(item.core)){const box=el('layer-'+item.core);if(box?.checked){box.checked=false;box.dispatchEvent(new Event('change'))}}
-   if(!item.core){const box=el('extra-'+item.id);if(box?.checked){box.checked=false;deactivate(item)}}}
- };
+ el('layers-clear').onclick=deselectAllLayers;
  el('labels-on').onchange=()=>{if(state.map)state.map.getContainer().classList.toggle('hide-zoning-labels',!el('labels-on').checked)};
+}
+function deselectAllLayers(){
+ // All map data toggles, including those initially enabled, are turned off.
+ // Keep the basemap and the user's selected tax lots; "Clear all" in the Selected Lots tab is separate.
+ for(const item of allNodes()){
+  const id=ITEMS.includes(item)?(item.core?'layer-':'extra-')+item.id:'sub-'+item.id;
+  const cb=el(id);
+  if(cb){cb.checked=false;cb.indeterminate=false}
+ }
+ for(const item of ITEMS){
+  if(item.core){
+   const cb=el('layer-'+item.core);
+   if(cb)cb.dispatchEvent(new Event('change'));
+  }
+ }
+ for(const entry of [...state.active.values()]){
+  if(entry.item)deactivate(entry.item);
+ }
+ const labels=el('labels-on');
+ if(labels){labels.checked=false;state.map?.getContainer().classList.add('hide-zoning-labels')}
+ window.ZOLA_SYNC_CHILDREN?.();
+ const notice=el('status');
+ if(notice){notice.textContent='All map layers deselected. Your selected tax lots and basemap are unchanged.';notice.dataset.kind='good'}
 }
 function allNodes(){const out=[];function walk(list){for(const n of list){out.push(n);if(n.children)walk(n.children)}}for(const g of GROUPS)walk(g.items);return out}
 function findInput(item,depth){return el((depth===0?(item.core?'layer-':'extra-'):'sub-')+item.id)}
@@ -172,7 +192,8 @@ function renderItem(item,depth,top){
  let children;
  if(item.children?.length){
   children=document.createElement('div');children.className='catalog-children';
-  if(item.filterGroup||item.id==='landmarks'||item.id==='firm2007'||item.id==='pfirms2015'||item.id==='transit-parking'||item.id==='fresh-zones'||item.id==='council')children.classList.add('catalog-grid-children');
+  // Render every nested option as a complete row. Never put long checkbox labels in a fixed-column grid.
+  children.classList.add('catalog-vertical-children');
   children.hidden=!item.expanded;
   for(const child of item.children)children.append(renderItem(child,depth+1,top));
   wrapper.append(children);
