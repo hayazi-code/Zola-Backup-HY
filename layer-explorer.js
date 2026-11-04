@@ -136,10 +136,11 @@ function build(){
 function deselectAllLayers(){
  // All map data toggles, including those initially enabled, are turned off.
  // Keep the basemap and the user's selected tax lots; "Clear all" in the Selected Lots tab is separate.
- for(const item of allNodes()){
-  const id=ITEMS.includes(item)?(item.core?'layer-':'extra-')+item.id:'sub-'+item.id;
-  const cb=el(id);
-  if(cb){cb.checked=false;cb.indeterminate=false}
+ // The catalog is generated dynamically, so clear actual DOM checkboxes,
+ // not just a subset of items in the data model.
+ for(const cb of document.querySelectorAll('#layer-tree input[type="checkbox"]')){
+  cb.checked=false;
+  cb.indeterminate=false;
  }
  for(const item of ITEMS){
   if(item.core){
