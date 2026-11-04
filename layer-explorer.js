@@ -59,8 +59,8 @@ const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata
 const el=id=>document.getElementById(id),sr=(a)=>String(a??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const baseOptions={
   minimal:{name:'Minimal grayscale',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attribution:'&copy; OpenStreetMap contributors',className:'base-minimal',maxNativeZoom:19},
-  nyc:{name:'NYC cartographic',url:'https://maps.nyc.gov/xyz/1.0.0/carto/basemap/{z}/{x}/{y}.jpg',attribution:'&copy; NYC OTI',className:'base-nyc',maxNativeZoom:19},
-  aerial:{name:'NYC aerial (2018)',url:'https://maps.nyc.gov/xyz/1.0.0/photo/2018/{z}/{x}/{y}.png8',attribution:'&copy; City of New York, 2018 orthophotography',className:'base-aerial',maxNativeZoom:19}
+  nyc:{name:'NYC cartographic',url:'https://maps.nyc.gov/xyz/1.0.0/carto/basemap/{z}/{x}/{y}.jpg',labelUrl:'https://maps.nyc.gov/xyz/1.0.0/carto/label/{z}/{x}/{y}.png8',attribution:'&copy; City of New York',className:'base-nyc',maxNativeZoom:19},
+  aerial:{name:'NYC aerial (2018)',url:'https://maps.nyc.gov/xyz/1.0.0/photo/2018/{z}/{x}/{y}.png8',labelUrl:'https://maps.nyc.gov/xyz/1.0.0/carto/label-lt/{z}/{x}/{y}.png8',attribution:'&copy; City of New York, 2018 orthophotography',className:'base-aerial',maxNativeZoom:19}
 };
 function smallState(item,value,kind=''){
  const s=el('extra-status-'+item.id);
@@ -133,6 +133,7 @@ function setBasemap(id){
  map.eachLayer(l=>{if(l instanceof L.TileLayer){map.removeLayer(l)}});
  const layer=L.tileLayer(def.url,{attribution:def.attribution,maxZoom:20,maxNativeZoom:def.maxNativeZoom,updateWhenIdle:true}).addTo(map);
  layer.bringToBack();
+ if(def.labelUrl)L.tileLayer(def.labelUrl,{attribution:def.attribution,maxNativeZoom:def.maxNativeZoom,maxZoom:20,updateWhenIdle:true}).addTo(map);
  map.getContainer().dataset.basemap=id;
  const key=document.querySelector('.map-key');if(key)key.style.background=id==='aerial'?'#ffffffed':'';
  state.tiles=layer;
