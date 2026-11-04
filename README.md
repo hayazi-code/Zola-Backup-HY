@@ -142,3 +142,7 @@ The exact hexadecimal values are used as the layer's base fill colors. The map a
 Subway route geometries and station points are sourced from a publicly accessible ArcGIS service: `https://services.arcgis.com/5e8P2PHwGNSRUvq3/ArcGIS/rest/services/New_York_City_Region_Transit_Layers/FeatureServer/`. The application queries routes from layer 6 and station points from layer 0, displays them above building polygons and zoning fills, and permits independent visibility switches. This is a public GIS representation, not live MTA service status or a guaranteed current route diagram.
 
 The base street map stays visible when all optional layers are turned off. **Deselect all layers** also disables subway, aerial, and building overlays without deleting previously selected tax lots. Turning Transit back on re-enables routes and stations if both had been deselected.
+
+## Deployment troubleshooting
+
+The header displays the current **BUILD** version. If the browser shows radio buttons in the Basemaps menu or an older build number, it is serving an older GitHub Pages version. Check GitHub Actions for the latest Pages deployment and hard refresh the site with a new URL query string. App controls in BUILD 18 are independent checkboxes for Transit, Building Footprints, and Aerial Imagery; sub-options for subway routes and stations. These layers query the ArcGIS regional public service and fall back to the separately hosted NYC Planning `SubwayLines_share` and `SubwayStations_share` feature services if a primary query fails or returns no features.
