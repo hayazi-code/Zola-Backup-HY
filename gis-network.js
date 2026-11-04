@@ -81,7 +81,9 @@
   return new Promise((resolve,reject)=>{
    if(signal?.aborted)return reject(new DOMException('Request aborted','AbortError'));
    const job={url:href,signal,resolve,reject,timeout:opts.timeout||DEFAULT_TIMEOUT,cacheable:opts.cache!==false};
-   queue.push(job);pump();
+   // Interactive parcel lookups jump ahead of queued background map tiles/geometry.
+   if(opts.priority>0)queue.unshift(job);else queue.push(job);
+   pump();
   });
  }
  window.ZOLA_GIS={request,stats,cacheSize:()=>cache.size,clearCache:()=>cache.clear(),config:{concurrency:LIMIT,timeoutMs:DEFAULT_TIMEOUT,cacheTtlMs:TTL,maxCacheEntries:MAX_CACHE}};
