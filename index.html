@@ -9,11 +9,11 @@
  <link rel="preconnect" href="https://services5.arcgis.com">
  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
- <link rel="stylesheet" href="styles.css?v=21">
+ <link rel="stylesheet" href="styles.css?v=22">
 </head>
 <body>
 <header>
- <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 21</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
+ <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 22</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
  <div class="header-actions"><button id="info-button" title="About this independent application">About &amp; data</button></div>
 </header>
 <main class="workspace">
@@ -42,7 +42,6 @@
    <div class="mobile-quick-actions" role="group" aria-label="Mobile map tools">
     <button type="button" id="mobile-search" aria-label="Open property search">⌕ <span>Search</span></button>
     <button type="button" id="mobile-layers" aria-label="Open map layers">▤ <span>Layers</span></button>
-    <button type="button" id="mobile-lots" aria-label="Open selected tax lots">▣ <span>Lots</span></button>
     <button type="button" id="mobile-close" aria-label="Close map controls">⌄ <span>Map</span></button>
    </div>
   </div>
@@ -56,11 +55,6 @@
    </div>
    <p class="search-help">Enter an address such as 120 Broadway, or a BBL such as 1000477501.</p>
   </div>
-  <nav class="tabs" aria-label="Application tabs">
-   <button id="tab-explore" class="active" type="button">Explore</button>
-   <button id="tab-selected" type="button">Selected lots</button>
-   <button id="tab-scenario" type="button">Scenario</button>
-  </nav>
   <div class="side-scroll">
    <div id="panel-explore" class="pane">
     <section class="section catalog-section"><div id="layer-tree" aria-label="Map layer catalog"></div></section>
@@ -69,43 +63,7 @@
      <div id="property-info" class="detail-placeholder">Click a lot on the map, or search for an address or BBL, to see its MapPLUTO attributes and zoning context.</div>
     </section>
    </div>
-   <div id="panel-selected" class="pane" hidden>
-    <section class="section">
-     <h3>Collect tax lots</h3>
-     <p>Choose lots anywhere in NYC. Selections do not need to be contiguous.</p>
-     <div class="mode-row"><button id="inspect-mode" class="active" type="button">Inspect a lot</button><button id="select-mode" type="button">Select by click</button></div>
-     <p class="subtle">To select multiple tax lots, choose Select by click. Click again to remove a selected lot.</p>
-     <div class="button-row"><button id="draw-polygon" type="button">Draw polygon</button><button id="draw-rectangle" type="button">Draw rectangle</button></div>
-     <p id="selection-progress" class="subtle" aria-live="polite"></p>
-    </section>
-    <section class="section">
-     <h3>Selected tax lots</h3>
-     <div class="selection-bar">
-      <div class="stat"><strong id="selection-count">0</strong><span>Lots</span></div>
-      <div class="stat"><strong id="selection-area">0 sq ft</strong><span>Total lot area</span></div>
-      <div class="stat"><strong id="selection-zones">0</strong><span>Primary districts</span></div>
-     </div>
-     <div class="button-row"><button class="primary" id="export">Export CSV</button><button id="zoom-selection">Zoom to selection</button><button id="clear">Clear all</button></div>
-     <p id="selection-summary" class="small-note">No lots selected</p>
-     <div id="selected-list"></div>
-    </section>
-   </div>
-   <div id="panel-scenario" class="pane" hidden>
-    <section class="section">
-     <h3>Illustrative floor area calculator</h3>
-     <p>Explore a hypothetical floor area by applying a manually entered FAR to the aggregate lot area of your selection.</p>
-     <div class="selection-bar">
-      <div class="stat"><strong id="scenario-count">0</strong><span>Selected lots</span></div>
-      <div class="stat" style="grid-column:span 2"><strong id="scenario-area">0 sq ft</strong><span>Aggregate mapped lot area</span></div>
-     </div>
-     <label for="assumed-far" class="eyebrow">Assumed FAR</label>
-     <div class="far-row"><input id="assumed-far" type="number" min="0" max="30" step=".1" value="3" inputmode="decimal"><span class="small-note">User-defined assumption, not zoning-derived</span></div>
-     <p class="eyebrow" style="margin-top:20px">Illustrative floor area</p>
-     <div class="scenario-value" id="scenario-floor">0 sq ft</div>
-     <p class="explanation">This calculation is simply aggregate MapPLUTO lot area × assumed FAR. It is <strong>not a zoning capacity, development rights, or 3D zoning-envelope determination</strong>. Noncontiguous parcels are not automatically one legal zoning lot. Height, yards, lot coverage, exemptions, special districts, and other Zoning Resolution provisions are not modeled.</p>
-    </section>
-   </div>
-   <div class="footer-note">Independent research tool. Data: <a target="_blank" rel="noopener" href="https://www.nyc.gov/content/planning/pages/resources/datasets">NYC Department of City Planning</a>. Check the <a target="_blank" rel="noopener" href="https://zr.planning.nyc.gov/">Zoning Resolution</a>. <a href="diagnostics.html" target="_blank" rel="noopener">Test core connections</a> · <a href="layer-diagnostics.html" target="_blank" rel="noopener">Test all layer services</a> for legally operative rules.</div>
+   <div class="footer-note">Independent research tool. Data: <a target="_blank" rel="noopener" href="https://www.nyc.gov/content/planning/pages/resources/datasets">NYC Department of City Planning</a>. Check the <a target="_blank" rel="noopener" href="https://zr.planning.nyc.gov/">Zoning Resolution</a> for legally operative rules. <a href="diagnostics.html" target="_blank" rel="noopener">Core diagnostics</a> · <a href="layer-diagnostics.html" target="_blank" rel="noopener">Layer diagnostics</a>.</div>
   </div>
   <div id="status" class="status" role="status" aria-live="polite">Loading NYC map…</div>
   </div>
@@ -116,7 +74,7 @@
  <p>An independent, public-data zoning and land-use explorer for New York City. It is not affiliated with, endorsed by, or a replacement for official NYC Planning determinations.</p>
  <p>This application uses live NYC Planning ArcGIS GIS services for zoning districts, tax lot polygons, commercial overlays, special districts, and MIH areas. Address search is supplied by NYC Planning GeoSearch. Basemap tiles are from OpenStreetMap.</p>
  <p>Because the application queries live third-party services, it is not an offline backup and will depend on those services remaining available. Source snapshots and robust validation would be needed for full operational independence.</p>
- <p>Tax-lot selection and exports are for geographic analysis; they do not constitute legal zoning lot assemblages.</p>
+ 
  <div class="network-health"><strong>GIS network performance</strong><p id="network-metrics" class="small-note">Loading diagnostics…</p><button type="button" id="clear-gis-cache" class="soft-button">Clear temporary map cache</button></div>
  <div class="link-row"><a href="AUDIT.md" target="_blank" rel="noopener">Read reliability audit</a><a href="https://github.com/hayazi-code/Zola-Backup-HY" target="_blank" rel="noopener">GitHub source</a><a href="diagnostics.html" target="_blank" rel="noopener">Run core diagnostics</a><a href="layer-diagnostics.html" target="_blank" rel="noopener">Test all layer services</a><a href="https://zola.planning.nyc.gov/" target="_blank" rel="noopener">Official ZoLa</a></div>
  <div style="text-align:right;margin-top:20px"><button id="about-close" class="primary">Close</button></div>
@@ -125,7 +83,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script defer src="gis-network.js?v=21"></script>
 <script defer src="layer-explorer.js?v=21"></script>
-<script defer src="app.js?v=21"></script>
-<script defer src="mobile.js?v=21"></script>
+<script defer src="app.js?v=22"></script>
+<script defer src="mobile.js?v=22"></script>
 </body>
 </html>
