@@ -39,6 +39,8 @@ const LOT_COLORS=Object.freeze({
 const UNKNOWN_LANDUSE_COLOR='#EBEBEB'; // All Others / No Data: RGB(235,235,235)
 // Independent, fill-only display controls; lines, labels, and pointer hit-testing are unchanged.
 const layerFillOpacity={zoning:0.59,landuse:0.60};
+const lotOutlineSettings={visible:true,color:'gray',weight:1};
+const LOT_OUTLINE_COLORS=Object.freeze({red:'#dc3545',purple:'#7543a0',gray:'#55525b'});
 const LANDUSE_STANDARD_URL='https://www.nyc.gov/assets/planning/download/pdf/applicants/applicant-portal/area_map_standard.pdf';
 const FORMAT=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -74,7 +76,7 @@ const layerStyles={
  special:()=>({color:'#544091',weight:2,fillColor:'#c8b9e8',fillOpacity:.08,dashArray:'6 4'}),
  subdistrict:()=>({color:'#8e55b1',weight:1.4,fillColor:'#d7b5e8',fillOpacity:.08,dashArray:'2 5'}),
  mih:()=>({color:'#2d997e',weight:2.2,fillColor:'#80d8ba',fillOpacity:.13,dashArray:'6 3'}),
- lots:f=>({color:flags.landuse?'#928a94':'#99929b',weight:map.getZoom()>=18?.9:.6,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse??'').padStart(2,'0')]||UNKNOWN_LANDUSE_COLOR):'#fff',fillOpacity:flags.landuse?layerFillOpacity.landuse:0})
+ lots:f=>({color:LOT_OUTLINE_COLORS[lotOutlineSettings.color],weight:lotOutlineSettings.weight,opacity:lotOutlineSettings.visible?1:0,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse??'').padStart(2,'0')]||UNKNOWN_LANDUSE_COLOR):'#fff',fillOpacity:flags.landuse?layerFillOpacity.landuse:0})
 };
 const titles={zoning:'Zoning district',commercial:'Commercial overlay',special:'Special district',subdistrict:'Special subdistrict',mih:'Mandatory Inclusionary Housing',lots:'Tax lot'};
 const featureLabel=(key,p)=>({
@@ -106,6 +108,17 @@ window.ZOLA_SET_FILL_OPACITY=(type,percent)=>{
  layerFillOpacity[type]=Math.max(0,Math.min(100,value))/100;
  if(type==='zoning')layerGroups.zoning?.setStyle(layerStyles.zoning);
  else layerGroups.lots?.setStyle(layerStyles.lots);
+};
+// Fill and stroke styling is independent of parcel geometry and its inspection click events.
+window.ZOLA_SET_LOT_OUTLINE=(patch={})=>{
+ if(Object.hasOwn(patch,'visible'))lotOutlineSettings.visible=Boolean(patch.visible);
+ if(Object.hasOwn(patch,'color')&&Object.hasOwn(LOT_OUTLINE_COLORS,patch.color))lotOutlineSettings.color=patch.color;
+ if(Object.hasOwn(patch,'weight')){
+  const weight=Number(patch.weight);
+  if(Number.isFinite(weight))lotOutlineSettings.weight=Math.max(1,Math.min(5,weight));
+ }
+ layerGroups.lots?.setStyle(layerStyles.lots);
+ bringHighlights();
 };
 function bringHighlights(){layerGroups.lots.bringToFront();inspectLayer.bringToFront()}
 window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS=()=>bringHighlights();
