@@ -136,7 +136,7 @@ function deselectAllLayers(){
  // Keep the basemap and current inspected parcel. No multi-lot selection workflow is active.
  // The catalog is generated dynamically, so clear actual DOM checkboxes,
  // not just a subset of items in the data model.
- for(const cb of document.querySelectorAll('#layer-tree input[type="checkbox"]')){
+ for(const cb of document.querySelectorAll('#layer-tree input[type="checkbox"]:not(#lot-outline-visible)')){
   cb.checked=false;
   cb.indeterminate=false;
  }
@@ -196,6 +196,34 @@ function renderItem(item,depth,top){
    window.ZOLA_SET_FILL_OPACITY?.(item.core,Number(input.value));
   });
   wrapper.append(control);
+ }
+ if(depth===0&&item.core==='lots'){
+  const controls=document.createElement('div');controls.className='lot-outline-controls';
+  const heading=document.createElement('div');heading.className='lot-outline-heading';
+  const title=document.createElement('strong');title.textContent='Parcel outlines';
+  const toggleLabel=document.createElement('label');toggleLabel.className='lot-outline-toggle';
+  const toggle=document.createElement('input');toggle.type='checkbox';toggle.id='lot-outline-visible';toggle.checked=true;
+  toggleLabel.append(toggle,document.createTextNode('Show'));heading.append(title,toggleLabel);controls.append(heading);
+  const colorLabel=document.createElement('label');colorLabel.className='lot-outline-field';colorLabel.htmlFor='lot-outline-color';
+  const colorText=document.createElement('span');colorText.textContent='Outline color';
+  const select=document.createElement('select');select.id='lot-outline-color';
+  for(const [value,label] of [['red','Red'],['purple','Purple'],['gray','Dark gray']]){
+   const option=document.createElement('option');option.value=value;option.textContent=label;
+   if(value==='gray')option.selected=true;select.append(option);
+  }
+  colorLabel.append(colorText,select);controls.append(colorLabel);
+  const weightLabel=document.createElement('label');weightLabel.className='lot-outline-field';weightLabel.htmlFor='lot-outline-weight';
+  const widthText=document.createElement('span');widthText.textContent='Line thickness';
+  const thicknessValue=document.createElement('output');thicknessValue.id='lot-outline-weight-value';thicknessValue.htmlFor='lot-outline-weight';thicknessValue.textContent='1 px';
+  const widthHeading=document.createElement('span');widthHeading.className='lot-outline-width-heading';widthHeading.append(widthText,thicknessValue);
+  const range=document.createElement('input');range.type='range';range.id='lot-outline-weight';range.min='1';range.max='5';range.step='1';range.value='1';
+  weightLabel.append(widthHeading,range);controls.append(weightLabel);
+  const hint=document.createElement('small');hint.textContent='Applies to MapPLUTO lot geometry. The purple inspected-parcel highlight is unaffected.';controls.append(hint);
+  const update=()=>window.ZOLA_SET_LOT_OUTLINE?.({visible:toggle.checked,color:select.value,weight:Number(range.value)});
+  toggle.addEventListener('change',update);
+  select.addEventListener('change',update);
+  range.addEventListener('input',()=>{thicknessValue.textContent=range.value+' px';update()});
+  wrapper.append(controls);
  }
  if(item.note){row.title=item.note;title.title=item.note}
  checkbox.onchange=()=>{
