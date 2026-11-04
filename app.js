@@ -20,7 +20,25 @@ const LOT_USES={
  '07':'Transportation and utility','08':'Public facilities and institutions',
  '09':'Open space and outdoor recreation','10':'Parking facilities','11':'Vacant land'
 };
-const LOT_COLORS={'01':'#f6d68a','02':'#f3af75','03':'#e68b85','04':'#eaa783','05':'#c987bf','06':'#9d9cc9','07':'#9db7d6','08':'#75abc5','09':'#9ccc9c','10':'#bebebe','11':'#ece2cd'};
+// Source: NYC DCP Area Map Standard v1.7, page 3, 14 August 2019.
+// Exact HEX equivalents of DCP's published RGB land-use color codes.
+// 40% transparency in the specification equals CSS/Leaflet fillOpacity 0.60.
+const LOT_COLORS=Object.freeze({
+ '01':'#FFFFB3', // One & Two Family Buildings: RGB(255,255,179)
+ '02':'#FFEB8A', // Multi-Family Walk-Up Buildings: RGB(255,235,138)
+ '03':'#FFC400', // Multi-Family Elevator Buildings: RGB(255,196,0)
+ '04':'#FF9966', // Mixed Residential & Commercial Buildings: RGB(255,153,102)
+ '05':'#E83333', // Commercial & Office Buildings: RGB(232,51,51)
+ '06':'#AB59C9', // Industrial & Manufacturing: RGB(171,89,201)
+ '07':'#FFCCFF', // Transportation & Utility: RGB(255,204,255)
+ '08':'#2E6DFF', // Public Facilities & Institutions: RGB(46,109,255)
+ '09':'#99FF66', // Open Space & Outdoor Recreation: RGB(153,255,102)
+ '10':'#AAAAAA', // Parking Facilities: RGB(170,170,170)
+ '11':'#2E2E2E'  // Vacant Land: RGB(46,46,46)
+});
+const UNKNOWN_LANDUSE_COLOR='#EBEBEB'; // All Others / No Data: RGB(235,235,235)
+const LANDUSE_FILL_OPACITY=0.60;
+const LANDUSE_STANDARD_URL='https://www.nyc.gov/assets/planning/download/pdf/applicants/applicant-portal/area_map_standard.pdf';
 const FORMAT=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const fmt=v=>Number.isFinite(Number(v))&&v!==''&&v!=null?FORMAT.format(Number(v)):'Not available';
@@ -57,7 +75,7 @@ const layerStyles={
  special:()=>({color:'#544091',weight:2,fillColor:'#c8b9e8',fillOpacity:.08,dashArray:'6 4'}),
  subdistrict:()=>({color:'#8e55b1',weight:1.4,fillColor:'#d7b5e8',fillOpacity:.08,dashArray:'2 5'}),
  mih:()=>({color:'#2d997e',weight:2.2,fillColor:'#80d8ba',fillOpacity:.13,dashArray:'6 3'}),
- lots:f=>({color:flags.landuse?'#928a94':'#99929b',weight:map.getZoom()>=18?.9:.6,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse||'').padStart(2,'0')]||'#efeee9'):'#fff',fillOpacity:flags.landuse?.62:0})
+ lots:f=>({color:flags.landuse?'#928a94':'#99929b',weight:map.getZoom()>=18?.9:.6,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse??'').padStart(2,'0')]||UNKNOWN_LANDUSE_COLOR):'#fff',fillOpacity:flags.landuse?LANDUSE_FILL_OPACITY:0})
 };
 const titles={zoning:'Zoning district',commercial:'Commercial overlay',special:'Special district',subdistrict:'Special subdistrict',mih:'Mandatory Inclusionary Housing',lots:'Tax lot'};
 const featureLabel=(key,p)=>({
@@ -118,11 +136,32 @@ function refreshMap(){
   for(const key of Object.keys(URLS))refreshLayer(key);
  },260);
 }
+function updateMapLegend(){
+ const host=DOM('map-key-content');if(!host)return;
+ if(flags.landuse){
+  host.innerHTML='<strong>Land Use · NYC DCP Standard</strong>'+
+   '<div class="landuse-key-grid">'+
+   Object.entries(LOT_COLORS).map(([code,hex])=>
+    '<span><i class="key-swatch" style="background:'+hex+'"></i><span>'+
+    safe(code+' · '+LOT_USES[code])+'</span></span>').join('')+
+   '<span><i class="key-swatch" style="background:'+UNKNOWN_LANDUSE_COLOR+'"></i><span>Other / No Data</span></span>'+
+   '</div><small class="legend-source">DCP Area Map Standard v1.7 · 40% transparency · '+
+   '<a href="'+LANDUSE_STANDARD_URL+'" target="_blank" rel="noopener">Official color specification</a></small>';
+ } else if(flags.zoning){
+  host.innerHTML='<strong>Zoning districts</strong><div class="key-items">'+
+   '<span><i class="key-swatch" style="background:#f7d88c"></i> Residential</span>'+
+   '<span><i class="key-swatch" style="background:#eca3a6"></i> Commercial</span>'+
+   '<span><i class="key-swatch" style="background:#b9a0cd"></i> Manufacturing</span></div>';
+ } else {
+  host.innerHTML='<strong>Map layers</strong><small class="legend-source">Enable land use or zoning districts to show a color legend.</small>';
+ }
+}
 function onFlagsChange(){
  for(const key of Object.keys(flags)){
   const ch=DOM('layer-'+key);if(ch)flags[key]=ch.checked;
  }
  layerGroups.lots.setStyle(layerStyles.lots);
+ updateMapLegend();
  refreshMap();
 }
 function selectMode(value){mode=value;DOM('inspect-mode').classList.toggle('active',mode==='inspect');DOM('select-mode').classList.toggle('active',mode==='select');notice(mode==='select'?'Selection mode: click lots to add or remove them.':'Inspect mode: click a lot to see its details.')}
@@ -317,7 +356,7 @@ function start(){
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();window.setupLayerExplorer?.(map);bindControls();selectMode('inspect');renderSelected();
+ createLayers();window.setupLayerExplorer?.(map);bindControls();updateMapLegend();selectMode('inspect');renderSelected();
  map.on('moveend',refreshMap);
  map.on('click',e=>{if(drawTool?.enabled?.()||selectionBusy)return;inspectAt(e.latlng)});
  map.on('draw:created',e=>{if(drawTool)drawTool.disable();drawHighlight.clearLayers();drawHighlight.addLayer(e.layer);selectByGeometry(e.layer.toGeoJSON())});
