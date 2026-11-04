@@ -8,7 +8,6 @@
  <title>ZoLa Backup HY | NYC Zoning &amp; Land Use</title>
  <link rel="preconnect" href="https://services5.arcgis.com">
  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
  <link rel="stylesheet" href="styles.css?v=22">
 </head>
 <body>
@@ -57,11 +56,11 @@
   </div>
   <div class="side-scroll">
    <div id="panel-explore" class="pane">
-    <section class="section catalog-section"><div id="layer-tree" aria-label="Map layer catalog"></div></section>
-    <section class="section">
+    <section class="section property-section">
      <h3>Property information</h3>
      <div id="property-info" class="detail-placeholder">Click a lot on the map, or search for an address or BBL, to see its MapPLUTO attributes and zoning context.</div>
     </section>
+    <section class="section catalog-section"><div id="layer-tree" aria-label="Map layer catalog"></div></section>
    </div>
    <div class="footer-note">Independent research tool. Data: <a target="_blank" rel="noopener" href="https://www.nyc.gov/content/planning/pages/resources/datasets">NYC Department of City Planning</a>. Check the <a target="_blank" rel="noopener" href="https://zr.planning.nyc.gov/">Zoning Resolution</a> for legally operative rules. <a href="diagnostics.html" target="_blank" rel="noopener">Core diagnostics</a> · <a href="layer-diagnostics.html" target="_blank" rel="noopener">Layer diagnostics</a>.</div>
   </div>
@@ -80,7 +79,6 @@
  <div style="text-align:right;margin-top:20px"><button id="about-close" class="primary">Close</button></div>
 </dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script defer src="gis-network.js?v=21"></script>
 <script defer src="layer-explorer.js?v=21"></script>
 <script defer src="app.js?v=22"></script>
