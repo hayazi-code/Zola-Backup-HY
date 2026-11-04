@@ -295,3 +295,127 @@
   #layer-tree .catalog-vertical-children{margin-left:22px !important;margin-right:8px !important}
   #layer-tree .catalog-vertical-children .catalog-vertical-children{margin-left:10px !important}
 }
+
+
+/* Mobile-first map interface, version 15 */
+.mobile-sheet-bar{display:none}
+.mobile-sheet-body{display:flex;flex-direction:column;flex:1;min-height:0}
+@media(max-width:740px){
+ html,body{height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none}
+ body{position:relative}
+ header{height:50px;min-height:50px;padding:0 12px;z-index:1200}
+ .brand strong{font-size:24px}
+ .brand small{display:none}
+ .header-actions button{min-height:36px;min-width:72px;font-size:12px}
+ .workspace{display:block;position:relative;height:calc(100dvh - 50px);overflow:hidden}
+ .map-wrap{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+ #map{position:absolute;inset:0;height:100%;width:100%;touch-action:pan-x pan-y}
+ .map-actions{top:12px;left:56px;right:8px;max-width:none;height:42px;padding:2px 5px;display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;white-space:nowrap;overscroll-behavior-x:contain;scrollbar-width:none}
+ .map-actions::-webkit-scrollbar{display:none}
+ .map-actions button{min-height:36px;min-width:max-content;padding:8px 11px;font-size:12px;touch-action:manipulation}
+ .map-actions .separator{flex:0 0 auto}
+ #map .leaflet-control-zoom a{width:34px;height:34px;line-height:34px}
+ .leaflet-top.leaflet-left{top:9px;left:3px}
+ .leaflet-control-attribution{max-width:70%;font-size:9px!important}
+ .map-key{position:absolute;bottom:116px;left:9px;right:auto;max-width:min(270px,calc(100% - 18px));padding:7px 9px;font-size:10px;pointer-events:none}
+ .map-key a{pointer-events:auto}
+ .map-key .key-items{gap:6px}
+ .map-key:has(.landuse-key-grid){max-width:min(315px,calc(100% - 18px))}
+ .map-key .landuse-key-grid{max-height:105px!important}
+ .side-panel{
+   position:absolute;left:0;right:0;bottom:0;top:auto;
+   display:flex;flex-direction:column;
+   width:100%;height:92px;min-height:0;
+   max-height:calc(100dvh - 64px);
+   overflow:hidden;
+   background:white;
+   border:1px solid #e5dfeb;border-bottom:0;
+   border-radius:19px 19px 0 0;
+   box-shadow:0 -7px 28px #2416332b;
+   z-index:930;
+   transition:height .25s cubic-bezier(.2,.8,.2,1);
+   padding-bottom:env(safe-area-inset-bottom,0px);
+   will-change:height;
+ }
+ body.mobile-sheet-expanded .side-panel{height:min(73dvh,720px)}
+ body.mobile-sheet-collapsed .side-panel{height:92px}
+ .mobile-sheet-bar{
+   display:flex;flex-direction:column;flex:0 0 92px;height:92px;
+   background:#fff;border-bottom:1px solid #eee9f3;
+   position:relative;z-index:40;
+   touch-action:pan-x;
+ }
+ .mobile-sheet-handle{
+   display:flex;align-items:center;justify-content:center;gap:9px;
+   border:0;background:transparent;color:#4e336b;
+   width:100%;min-height:35px;max-height:35px;padding:9px 14px 4px;
+   font-size:12px;font-weight:750;
+   cursor:pointer;touch-action:none;
+ }
+ .mobile-grip{
+   display:block;flex:0 0 37px;height:5px;border-radius:99px;
+   background:#c6bdcf;
+ }
+ .mobile-chevron{font-size:17px;line-height:1;margin-left:auto}
+ .mobile-sheet-handle #mobile-sheet-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ body.mobile-sheet-expanded .mobile-chevron{transform:rotate(180deg)}
+ .mobile-quick-actions{
+   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+   gap:6px;padding:2px 11px 9px;
+ }
+ .mobile-quick-actions button{
+   display:flex;align-items:center;justify-content:center;gap:5px;
+   min-width:0;min-height:43px;padding:7px 4px;
+   border:1px solid #e4deeb;border-radius:8px;
+   background:#f9f7fc;color:#542b80;font-weight:700;font-size:15px;
+   touch-action:manipulation;
+ }
+ .mobile-quick-actions button span{font-size:11px}
+ .mobile-quick-actions button:active{background:#eae0f4}
+ .mobile-quick-actions #mobile-close{background:#f1edf5}
+ .mobile-sheet-body{display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+ body.mobile-sheet-expanded .mobile-sheet-body{display:flex}
+ .side-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;min-height:0}
+ .tabs{flex:0 0 auto;min-height:49px}
+ .tabs button{min-height:49px;font-size:13px;padding:11px 6px}
+ .search-block{padding:11px 14px}
+ .search-field{gap:8px;margin-top:8px}
+ .search-field input{font-size:16px;min-height:46px}
+ .search-field>button{min-width:76px;min-height:46px;font-size:13px}
+ .search-help{font-size:10px;margin-top:5px}
+ .suggestions{max-height:min(38dvh,260px);z-index:2000}
+ .section{padding:14px}
+ .section h3{font-size:13px}
+ .side-scroll .catalog-row{min-height:35px}
+ .side-scroll .catalog-label{font-size:12px;line-height:1.4}
+ .side-scroll .catalog-row input[type=checkbox]{width:17px;height:17px;flex-basis:17px}
+ .side-scroll .catalog-row input[type=radio]{width:17px;height:17px}
+ .side-scroll .catalog-vertical-children .catalog-label{font-size:12px!important}
+ .side-scroll .catalog-vertical-children>.catalog-node>.catalog-row{min-height:36px;padding:7px 4px!important}
+ .side-scroll .catalog-vertical-children .catalog-label input{height:17px!important;width:17px!important;flex-basis:17px!important}
+ .side-scroll .catalog-expand{min-width:32px;min-height:34px;font-size:18px}
+ .side-scroll .layer-group summary{min-height:43px;padding:13px 14px;font-size:13px}
+ .side-scroll .catalog-source{min-height:28px;min-width:28px;display:inline-flex;align-items:center;justify-content:center}
+ #layers-clear{min-height:39px;font-size:12px!important}
+ .button-row button,.mode-row button,.action-row button{min-height:44px;padding:10px 12px;font-size:13px}
+ .selection-entry{min-height:54px}
+ .selection-entry button{min-height:40px}
+ .aerial-year-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+ .aerial-year{min-height:33px;font-size:12px}
+ .status{margin:5px 11px 9px;max-height:56px;overflow:auto;font-size:10px;padding:7px 9px;flex:0 0 auto}
+ .footer-note{padding:13px 15px}
+ body.mobile-sheet-expanded .map-key{display:none}
+ dialog{max-height:calc(100dvh - 32px);overflow:auto}
+}
+@media(max-width:380px){
+ .mobile-quick-actions{gap:4px;padding-inline:8px}
+ .mobile-quick-actions button{gap:3px}
+ .mobile-quick-actions button span{font-size:10px}
+ .map-actions button{padding:7px 9px}
+ .selection-bar{gap:5px}
+ .stat{padding:10px 5px}
+ .stat strong{font-size:14px}
+}
+@media(prefers-reduced-motion:reduce){
+ .side-panel{transition:none!important}
+}
