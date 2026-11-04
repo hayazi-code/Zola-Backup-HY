@@ -54,3 +54,63 @@
 #map-key .key-items{max-width:310px}
 #map-key:has(.landuse-key-grid){max-width:440px}
 @media(max-width:740px){#map-key:has(.landuse-key-grid){max-width:min(90vw,330px);bottom:9px}#map-key-content .landuse-key-grid{max-height:118px;grid-template-columns:1fr 1fr}}
+
+/* ZoLa screenshot-parity menu: nested district selectors, timeline, and basemap years */
+.catalog-node[hidden],.catalog-children[hidden],.basemap-row[hidden],.aerial-year[hidden]{display:none!important}
+.catalog-node{display:block}
+.catalog-node>.catalog-row{min-height:28px;padding:5px 14px 5px 22px;gap:4px}
+.catalog-row.catalog-depth-1{padding:3px 14px 3px 33px;min-height:24px}
+.catalog-row.catalog-depth-2{padding:2px 7px 2px 5px;min-height:23px}
+.catalog-row.catalog-depth-3{padding:2px 6px}
+.catalog-row .catalog-label{gap:5px;font-size:11.5px;min-width:0}
+.catalog-row.catalog-depth-1 .catalog-label{font-size:11px;font-weight:600}
+.catalog-row.catalog-depth-2 .catalog-label{font-size:10.5px;font-weight:500}
+.catalog-swatch{flex:0 0 9px;width:9px;height:9px;display:inline-block;border:1px solid #ffffffaa;box-shadow:0 0 0 .3px #7774}
+.catalog-row .catalog-meta{display:flex;align-items:center;gap:5px}
+.catalog-expand{background:transparent;color:#a5693e;min-width:20px;height:20px;padding:0;border:0;border-radius:3px;font-size:13px;line-height:1;text-align:center}
+.catalog-expand:hover{background:#f5eff8}
+.catalog-expand:focus-visible{outline:2px solid #6b4a96}
+.catalog-children{padding:0 0 3px 0;display:block}
+.catalog-children.catalog-grid-children{
+ display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:0 2px;
+ margin:0 13px 5px 36px;
+ padding:0 0 1px;
+}
+.catalog-grid-children>.catalog-node>.catalog-row{padding:3px 0;min-height:20px}
+.catalog-grid-children .catalog-label{gap:4px;font-size:10px;white-space:nowrap}
+.catalog-grid-children .catalog-swatch{display:none}
+.catalog-grid-children .catalog-meta{display:none}
+.catalog-grid-children .catalog-label input{width:12px;height:12px;flex-basis:12px}
+.catalog-node[data-layer-id="zoning"]>.catalog-children,
+.catalog-node[data-layer-id="commercial"]>.catalog-children{border-left:1px solid #e9e1ec;margin-left:19px}
+.catalog-node[data-layer-id="zoning"]>.catalog-children>.catalog-node>.catalog-row,
+.catalog-node[data-layer-id="commercial"]>.catalog-children>.catalog-node>.catalog-row{padding-left:14px}
+.catalog-unavailable{font-size:9px;white-space:nowrap;color:#9a879b;background:#faf8fb}
+.layer-group summary{font-size:12px;padding:12px 14px}
+.layer-group summary small{margin-left:auto}
+.layer-group-items{padding-bottom:6px}
+.layer-group .catalog-row:has(input:disabled) .catalog-label{opacity:.7}
+.zoning-timeline{padding:3px 16px 11px 30px}
+.timeline-sliders{height:19px;position:relative;margin-bottom:4px}
+.timeline-sliders input[type=range]{position:absolute;top:0;left:0;right:0;width:100%;height:16px;appearance:none;-webkit-appearance:none;background:transparent;margin:0;pointer-events:none;accent-color:#9999a0}
+.timeline-sliders input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;pointer-events:auto;background:#fff;border:1px solid #dedbe0;width:13px;height:18px;border-radius:3px;box-shadow:0 1px 5px #0003;cursor:ew-resize}
+.timeline-sliders input[type=range]::-moz-range-thumb{pointer-events:auto;background:#fff;border:1px solid #dedbe0;width:13px;height:18px;border-radius:3px;box-shadow:0 1px 5px #0003;cursor:ew-resize}
+.timeline-sliders:before{content:'';height:5px;background:#d1ccd4;position:absolute;top:6px;left:0;right:0}
+.timeline-dates{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:#716b75}
+.timeline-dates span{background:#eeeeef;border-radius:2px;padding:2px 5px}
+.timeline-note{display:block;color:#948a99;font-size:9px;line-height:1.4;margin-top:5px}
+.basemap-row{padding:7px 14px 7px 23px!important;justify-content:flex-start!important;min-height:29px}
+.aerial-year-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:3px 13px 9px 36px;gap:7px 3px}
+.aerial-year{font-size:11px;display:flex;align-items:center;gap:5px;white-space:nowrap;cursor:pointer;color:#534a56}
+.aerial-year input{width:12px;height:12px;margin:0;accent-color:#63358f}
+.aerial-year:has(input:disabled){opacity:.47;cursor:not-allowed}
+#map[data-basemap=buildings] .leaflet-tile-pane,#map[data-basemap=aerial] .leaflet-tile-pane{filter:none!important;opacity:1!important}
+#map[data-basemap=transit] .leaflet-tile-pane{filter:grayscale(1) brightness(1.14) contrast(.69);opacity:.77}
+@media(max-width:740px){
+ .catalog-children.catalog-grid-children{margin-left:26px}
+ .catalog-row.catalog-depth-1{padding-left:25px}
+ .aerial-year-grid{padding-left:27px}
+ .zoning-timeline{padding-left:24px}
+}
