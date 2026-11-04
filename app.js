@@ -71,7 +71,7 @@ function createLayers(){
   layerGroups[key]=L.geoJSON(null,{
    style:layerStyles[key],
    onEachFeature:(f,l)=>{
-    if(key!=='lots')l.bindTooltip(safe(featureLabel(key,f.properties||{})),{sticky:true,direction:'top',className:'district-tip'});
+    if(key!=='lots')l.bindTooltip(safe(featureLabel(key,f.properties||{})),{sticky:!(key==='zoning'&&map.getZoom()>=15),permanent:key==='zoning'&&map.getZoom()>=15,direction:key==='zoning'?'center':'top',className:key==='zoning'?'zoning-label':'district-tip'});
     if(key==='lots')l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);inspect(f,{add:mode==='select'})});
     else l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);inspectAt(e.latlng)});
    }
