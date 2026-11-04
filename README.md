@@ -167,3 +167,7 @@ The previous **Selected lots** and **Scenario** tabs and their supporting drawin
 ## Build 23: current aerial imagery only
 
 The Basemaps and transit section now has a single **Aerial Imagery** checkbox that shows or hides current Esri World Imagery. The historical imagery year selector and associated tile-loading logic have been removed. Other map overlays remain independent.
+
+## Build 27: independent fill opacity controls
+
+The **Zoning Districts** and **Show Land Use Colors** entries now have separate live fill-opacity sliders from 0% to 100%. Zoning starts at 59% and land use at 60% to retain the previous visual appearance. The land-use default is NYC DCP Area Map Standard v1.7's 40% transparency. These sliders affect *polygon fill only*: district outlines, parcel outlines, labels, and parcel-click inspection remain fully visible and interactive, even at 0% opacity. Changes call Leaflet `setStyle` directly on existing geometry rather than making new GIS requests. These are viewing preferences, not modifications to the published DCP colors or underlying data.
