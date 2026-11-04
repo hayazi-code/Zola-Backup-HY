@@ -160,6 +160,24 @@ function refreshMap(){
   for(const key of Object.keys(URLS))refreshLayer(key);
  },260);
 }
+// The legend's visibility is independent of map layers and survives legend-content rebuilds.
+function setLegendExpanded(expanded){
+ const legend=DOM('map-key'),button=DOM('map-key-toggle'),content=DOM('map-key-content');
+ if(!legend||!button||!content)return;
+ legend.classList.toggle('is-collapsed',!expanded);
+ content.hidden=!expanded;
+ button.setAttribute('aria-expanded',String(expanded));
+ button.setAttribute('aria-label',expanded?'Hide map legend':'Show map legend');
+ const icon=button.querySelector('.map-key-chevron');
+ if(icon)icon.textContent=expanded?'⌃':'⌄';
+}
+function setupLegendToggle(){
+ const button=DOM('map-key-toggle');
+ if(!button)return;
+ // On small screens start compact to avoid covering the map and location controls.
+ setLegendExpanded(!window.matchMedia('(max-width: 740px)').matches);
+ button.addEventListener('click',()=>setLegendExpanded(button.getAttribute('aria-expanded')!=='true'));
+}
 function updateMapLegend(){
  const host=DOM('map-key-content');if(!host)return;
  if(flags.landuse){
@@ -430,7 +448,7 @@ function start(){
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();window.setupLayerExplorer?.(map);bindControls();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
+ createLayers();window.setupLayerExplorer?.(map);bindControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
  map.on('moveend',refreshMap);
  map.on('click',e=>inspectAt(e.latlng));
  const url=new URL(location.href),bbl=url.searchParams.get('bbl');if(bbl)lookupBBL(bbl);
