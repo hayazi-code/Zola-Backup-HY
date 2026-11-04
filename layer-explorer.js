@@ -270,6 +270,60 @@ function setBasemap(id){
  const key=document.querySelector('.map-key');if(key)key.style.background=id==='aerial'?'#ffffffec':'';
  state.tiles=base;
 }
+function checked(id){const input=el('sub-'+id);return input?(!input.disabled&&input.checked):true}
+function visibleCore(key,feature){
+ const p=feature.properties||{};
+ if(key==='zoning'){
+  const z=String(p.ZONEDIST||'').toUpperCase().trim();
+  const m=z.match(/^([RCM])(\d{1,2})/);
+  if(m){
+   const type=m[1],district=type+m[2];
+   const groupId=type==='R'?'residence-districts':type==='C'?'commercial-districts':'manufacturing-districts';
+   return checked(groupId)&&checked('zone-'+district);
+  }
+  if(/PARK/i.test(z))return checked('parks');
+  return true;
+ }
+ if(key==='commercial'){
+  const overlay=String(p.OVERLAY||'').toUpperCase().trim();
+  const m=overlay.match(/^(C[12])-(\d+)/);
+  if(!m)return true;
+  return checked('overlay-'+m[1].toLowerCase())&&checked('overlay-'+m[1]+'-'+m[2]);
+ }
+ return true;
+}
+function optionalVisible(item,f){
+ const p=f.properties||{};
+ const enabled=id=>checked(id);
+ if(item.id==='council')return enabled('council-new');
+ if(item.id==='edesignations')return enabled('edesignation-item');
+ if(item.id==='firm2007'){
+  const zone=String(p.FLD_ZONE||p.ZONE||p.FLD_ZONE1||'').toUpperCase();
+  if(!zone)return true;
+  if(zone.startsWith('V'))return enabled('flood07-v');
+  if(zone.startsWith('A'))return enabled('flood07-a');
+  if(zone.startsWith('X'))return enabled('flood07-x');
+  return true;
+ }
+ if(item.id==='landmarks'||item.id==='transit-parking'){
+  // When a service lacks reliable subtype attributes, display its full geometry rather than silently misclassifying it.
+  // The UI marks these subtype filters as provisional in the parent layer's metadata tooltip.
+  return true;
+ }
+ if(item.id==='zma'&&window.ZOLA_ZMA_DATE_RANGE){
+  const r=window.ZOLA_ZMA_DATE_RANGE;
+  const field=Object.entries(p).find(([k,v])=>/^(ADOPT_DATE|ADOPTION_DATE|EFFECTIVE_DATE|EFFECTDATE|REZ_DATE)$/i.test(k)&&v!=null);
+  if(field){
+   const time=Number(field[1])>1000000000?new Date(Number(field[1])):new Date(field[1]);
+   if(!Number.isNaN(time.getTime())){
+    const val=time.getUTCFullYear()+'-'+String(time.getUTCMonth()+1).padStart(2,'0');
+    return val>=r.start&&val<=r.end;
+   }
+  }
+ }
+ return true;
+}
+window.ZOLA_VISIBLE_FEATURE=visibleCore;
 function styleFor(item,f){
  const col=item.color||'#7e6a99', geom=f.geometry?.type||'';
  if(geom.includes('Line'))return {color:col,weight:2,opacity:.82,dashArray:item.outline?'5 4':null};
@@ -326,10 +380,11 @@ async function load(item){
    if(batch.length<1000&&!exceeded)break;
   }
   if(ac.signal.aborted||!state.active.has(item.id))return;
-  group.clearLayers();group.addData({type:'FeatureCollection',features:all});
+  const shown=all.filter(f=>optionalVisible(item,f));
+  group.clearLayers();group.addData({type:'FeatureCollection',features:shown});
   if(item.id==='zma')group.bringToFront();
   activeLayersOnTop();
-  smallState(item,all.length>=3000?'Zoom for detail':all.length+' shown',all.length>=3000?'warn':'good');
+  smallState(item,all.length>=3000?'Zoom for detail':shown.length+' shown',all.length>=3000?'warn':'good');
  }catch(e){if(ac.signal.aborted||e.name==='AbortError')return;group.clearLayers();smallState(item,'Unavailable','error');console.warn('ZoLa layer error',item.id,e)}
 }
 function activate(item){
