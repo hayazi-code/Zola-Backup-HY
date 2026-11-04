@@ -135,7 +135,7 @@ function build(){
 }
 function deselectAllLayers(){
  // All map data toggles, including those initially enabled, are turned off.
- // Keep the basemap and the user's selected tax lots; "Clear all" in the Selected Lots tab is separate.
+ // Keep the basemap and current inspected parcel. No multi-lot selection workflow is active.
  // The catalog is generated dynamically, so clear actual DOM checkboxes,
  // not just a subset of items in the data model.
  for(const cb of document.querySelectorAll('#layer-tree input[type="checkbox"]')){
@@ -159,7 +159,7 @@ function deselectAllLayers(){
  if(labels){labels.checked=false;state.map?.getContainer().classList.add('hide-zoning-labels')}
  window.ZOLA_SYNC_CHILDREN?.();
  const notice=el('status');
- if(notice){notice.textContent='All map layers deselected. Your selected tax lots and basemap are unchanged.';notice.dataset.kind='good'}
+ if(notice){notice.textContent='All map layers deselected. Your basemap and current inspected parcel are unchanged.';notice.dataset.kind='good'}
 }
 function allNodes(){const out=[];function walk(list){for(const n of list){out.push(n);if(n.children)walk(n.children)}}for(const g of GROUPS)walk(g.items);return out}
 function findInput(item,depth){return el((depth===0?(item.core?'layer-':'extra-'):'sub-')+item.id)}
