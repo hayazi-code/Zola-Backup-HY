@@ -13,12 +13,12 @@
 const SERVICE='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/MapPLUTO/FeatureServer';
 const map=L.map('map').setView([40.69,-73.94],11);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:20}).addTo(map);
 const selected=new Map(),selectionLayer=L.geoJSON(null,{style:{color:'#e88414',weight:2,fillOpacity:.35}}).addTo(map);
-const zoningLayer=L.geoJSON(null,{style:f=>{const z=String(f.properties?.ZONEDIST||'');const color=z.startsWith('R')?'#f4d477':z.startsWith('C')?'#e78a8e':z.startsWith('M')?'#ad91d2':'#b5d5d0';return {color:'#776d72',weight:.7,fillColor:color,fillOpacity:.52}},onEachFeature:(f,l)=>{l.bindTooltip(String(f.properties?.ZONEDIST||'Zoning district'),{sticky:true});l.on('click',e=>{L.DomEvent.stopPropagation(e);status('Zoning district: '+(f.properties?.ZONEDIST||'unknown')+'. Click map outside zoning polygons for parcel selection.')})}}).addTo(map);
+const zoningLayer=L.geoJSON(null,{style:f=>{const z=String(f.properties?.ZONEDIST||'');const color=z.startsWith('R')?'#f4d477':z.startsWith('C')?'#e78a8e':z.startsWith('M')?'#ad91d2':'#b5d5d0';return {color:'#776d72',weight:.7,fillColor:color,fillOpacity:.52}},onEachFeature:(f,l)=>{l.bindTooltip(String(f.properties?.ZONEDIST||'Zoning district'),{sticky:true});l.on('click',e=>{status('Zoning district: '+(f.properties?.ZONEDIST||'unknown')+'. Parcel lookup in progress…')})}}).addTo(map);
 let zoningRequest=0,zoningTimer;
-async function loadZoning(){const token=++zoningRequest;if(!el('zoningToggle').checked){zoningLayer.clearLayers();el('zoningStatus').textContent='Zoning layer hidden';return}if(map.getZoom()<12){zoningLayer.clearLayers();el('zoningStatus').textContent='Zoom to level 12+ to load zoning polygons';return}
+async function loadZoning(){const token=++zoningRequest;if(!el('zoningToggle').checked){zoningLayer.clearLayers();el('zoningStatus').textContent='Zoning layer hidden';return}if(map.getZoom()<13){zoningLayer.clearLayers();el('zoningStatus').textContent='Zoom to level 13+ to load zoning polygons';return}
 const b=map.getBounds(),geom={xmin:b.getWest(),ymin:b.getSouth(),xmax:b.getEast(),ymax:b.getNorth(),spatialReference:{wkid:4326}};
 el('zoningStatus').textContent='Loading zoning polygons…';
-try{const url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/Industry_in_NYC_WFL/FeatureServer/3/query';
+try{const url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/nyzd/FeatureServer/0/query';
 const data=await getJSON(url,{f:'geojson',where:'1=1',outFields:'ZONEDIST',geometry:JSON.stringify(geom),geometryType:'esriGeometryEnvelope',inSR:4326,outSR:4326,spatialRel:'esriSpatialRelIntersects',resultRecordCount:2000});
 if(token!==zoningRequest)return;zoningLayer.clearLayers();zoningLayer.addData(data);el('zoningStatus').textContent=(data.features?.length||0)+' zoning polygons displayed · DCP public data';
 }catch(e){if(token===zoningRequest)el('zoningStatus').textContent='Zoning layer error: '+e.message}}
