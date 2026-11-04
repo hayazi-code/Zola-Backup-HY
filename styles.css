@@ -542,6 +542,32 @@
  .mobile-sheet-body .side-scroll{min-height:0;overflow-y:auto}
 }
 
-/* Build 25: DCP land-use legend fills down the left column (01-06), then right (07-11, Other). */
-#map-key-content .landuse-key-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,auto));grid-auto-flow:column;gap:6px 13px;max-height:none;overflow:visible}
-@media(max-width:740px){#map-key-content .landuse-key-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,auto));grid-auto-flow:column;gap:5px 8px;max-height:none!important;overflow:visible}}
+
+/* Build 26: DCP land-use legend is a vertical, numerically ordered list. */
+#map-key-content .landuse-key-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  grid-auto-flow: row !important;
+  gap: 5px !important;
+  max-height: min(57vh, 355px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 6px;
+}
+#map-key-content .landuse-key-grid > span {
+  display: flex !important;
+  align-items: center !important;
+  width: 100%;
+  min-height: 15px;
+  font-size: 11px;
+}
+#map-key:has(.landuse-key-grid) { max-width: min(340px,calc(100vw - 20px)) !important; }
+@media(max-width:740px) {
+  #map-key-content .landuse-key-grid {
+    max-height: min(32dvh, 235px) !important;
+    gap: 4px !important;
+  }
+  #map-key-content .landuse-key-grid > span { font-size: 10px; }
+}
