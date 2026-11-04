@@ -93,7 +93,7 @@ const GROUPS=[
 const ITEMS=GROUPS.flatMap(g=>g.items.map(item=>({...item,group:g.name})));
 const YEAR_OPTIONS=['2024','2022','2020','2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924'];
 const VERIFIED_YEARS=new Set(['2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924']); // Listed in the legacy NYC tile catalog; runtime may still require credentials.
-const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0,mode:'transit',overlays:{transit:true,buildings:false,aerial:false},subway:{routes:true,stations:true},transitLayers:{},transitAborts:{},transitLoadToken:0,aerialYear:'current',buildingLayer:null,buildingAbort:null,buildingToken:0,baseLoadToken:0,baseLayer:null,aerialLayer:null};
+const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0,mode:'transit',overlays:{transit:true,lirr:false,buildings:false,aerial:false},subway:{routes:true,stations:true},lirr:{routes:true,stations:true},lirrLayers:{},lirrAborts:{},lirrLoadToken:0,transitLayers:{},transitAborts:{},transitLoadToken:0,aerialYear:'current',buildingLayer:null,buildingAbort:null,buildingToken:0,baseLoadToken:0,baseLayer:null,aerialLayer:null};
 const el=id=>document.getElementById(id),sr=(a)=>String(a??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const baseOptions={
  transit:{name:'Transit',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attribution:'&copy; OpenStreetMap contributors',maxNativeZoom:19},
@@ -152,8 +152,9 @@ function deselectAllLayers(){
   if(entry.item)deactivate(entry.item);
  }
  // Keep the master reset synchronized with independently toggleable basemap overlays.
- for(const id of ['transit','buildings','aerial'])toggleOverlay(id,false);
+ for(const id of ['transit','lirr','buildings','aerial'])toggleOverlay(id,false);
  state.subway.routes=false;state.subway.stations=false;
+ state.lirr.routes=false;state.lirr.stations=false;
  const labels=el('labels-on');
  if(labels){labels.checked=false;state.map?.getContainer().classList.add('hide-zoning-labels')}
  window.ZOLA_SYNC_CHILDREN?.();
@@ -237,13 +238,14 @@ function makeTimeline(item){
 function buildBasemaps(){
  const group=document.createElement('details');group.className='layer-group';group.open=true;
  const summary=document.createElement('summary');summary.textContent='Basemaps and transit';
- const count=document.createElement('small');count.textContent='4';summary.append(count);group.append(summary);
+ const count=document.createElement('small');count.textContent='5';summary.append(count);group.append(summary);
  const body=document.createElement('div');body.className='layer-group-items basemap-controls-body';group.append(body);
  const explanation=document.createElement('p');explanation.className='basemap-note';
  explanation.textContent='Independent checkboxes. Street map stays underneath; switch transit, building footprints, and aerial imagery on or off together or separately.';
  body.append(explanation);
  const choices=[
   {id:'transit',name:'Transit (routes and stations)',swatch:'#d06d60',checked:true,note:'NYC subway lines and stations from a public ArcGIS dataset'},
+  {id:'lirr',name:'Long Island Rail Road',swatch:'#006983',checked:false,note:'LIRR route geometry and station locations with independent switches'},
   {id:'buildings',name:'Building Footprints',swatch:'#97949b',checked:false,note:'NYC OTI building polygons, visible at zoom 16+'},
   {id:'3d',name:'3D Buildings',swatch:'#b8b8be',available:false,note:'3D model rendering is not yet implemented'},
   {id:'aerial',name:'Aerial Imagery',swatch:'#a6bdce',checked:false,note:'Esri imagery under zoning and transit overlays'}
@@ -267,6 +269,17 @@ function buildBasemaps(){
    }
    const indicator=document.createElement('span');indicator.id='transit-layer-status';indicator.className='basemap-note';indicator.textContent='Loading NYC subway layers…';
    children.append(indicator);body.append(children);
+  }
+  if(option.id==='lirr'){
+   const children=document.createElement('div');children.className='basemap-child-options lirr-child-options';
+   for(const [name,title] of [['routes','LIRR lines'],['stations','LIRR stations']]){
+    const label=document.createElement('label');label.className='catalog-label basemap-child';
+    const check=document.createElement('input');check.type='checkbox';check.id='lirr-'+name;check.checked=true;
+    check.onchange=()=>{state.lirr[name]=check.checked;syncLirrVisibility()};
+    label.append(check,document.createTextNode(title));children.append(label);
+   }
+   const info=document.createElement('span');info.id='lirr-layer-status';info.className='basemap-note';info.textContent='Enable LIRR to load lines and stations.';
+   children.append(info);body.append(children);
   }
   if(option.id==='aerial'){
    const years=document.createElement('div');years.className='aerial-year-grid';
@@ -363,6 +376,7 @@ async function loadBuildingFootprints(){
 }
 const SUBWAY_ROOT='https://services.arcgis.com/5e8P2PHwGNSRUvq3/ArcGIS/rest/services/New_York_City_Region_Transit_Layers/FeatureServer/';
 const SUBWAY_API={routes:SUBWAY_ROOT+'6/query',stations:SUBWAY_ROOT+'0/query'};
+const LIRR_API={routes:SUBWAY_ROOT+'7/query',stations:SUBWAY_ROOT+'1/query'};
 const SUBWAY_FALLBACK={
  routes:'https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/SubwayLines_share/FeatureServer/0/query',
  stations:'https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/SubwayStations_share/FeatureServer/0/query'
@@ -430,6 +444,11 @@ function bringTransitForward(){
  // Subway lines above building polygons, station markers above their lines.
  for(const kind of ['routes','stations']){
   const layer=state.transitLayers[kind];
+  if(layer&&state.map.hasLayer(layer))layer.bringToFront();
+ }
+ // LIRR tracks and stations appear above basemap and zoning fills.
+ for(const kind of ['routes','stations']){
+  const layer=state.lirrLayers[kind];
   if(layer&&state.map.hasLayer(layer))layer.bringToFront();
  }
  // Keep parcel inspection highlights on top of thematic layers.
@@ -500,12 +519,102 @@ async function loadTransit(){
   transitStatus(message+(loaded.every(([k,v])=>v.count===0)?' · No features in the visible map area':' shown'),loaded.every(([k,v])=>v.count===0)?'':'good');
  }
 }
+// LIRR routes use the feature service's own hex color field where available.
+// See NYC_LIRR_routes FeatureServer/7 renderer, e.g. Montauk #006983.
+function lirrStatus(message,kind=''){
+ const n=el('lirr-layer-status');if(n){n.textContent=message;n.dataset.kind=kind}
+}
+function lirrColor(f){
+ const raw=String(f.properties?.color||'').replace(/^#/,'');
+ return /^[0-9A-Fa-f]{6}$/.test(raw)?'#'+raw.toUpperCase():'#006983';
+}
+function ensureLirrLayers(){
+ if(state.lirrLayers.routes&&state.lirrLayers.stations)return;
+ const map=state.map;
+ state.lirrLayers.routes=L.geoJSON(null,{
+  style:f=>({color:lirrColor(f),weight:map.getZoom()>=14?4:3,opacity:.95,lineCap:'round'}),
+  onEachFeature:(f,l)=>{
+   const p=f.properties||{},name=String(p.long_name||p.short_name||'LIRR route');
+   l.bindTooltip(sr(name),{sticky:true});
+  }
+ });
+ state.lirrLayers.stations=L.geoJSON(null,{
+  pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:map.getZoom()>=15?6:4.5,color:'#006983',weight:2,fillColor:'#ffffff',fillOpacity:1}),
+  onEachFeature:(f,l)=>{
+   const p=f.properties||{},name=String(p.stop_name||p.station_name||p.name||'LIRR station').trim();
+   l.bindPopup('<strong>'+sr(name)+'</strong><br>Long Island Rail Road');
+   l.bindTooltip(sr(name),{permanent:map.getZoom()>=13,sticky:false,direction:'right',offset:[7,0],opacity:.95,className:'lirr-station-label'});
+  }
+ });
+}
+function syncLirrVisibility(){
+ if(!state.map)return;
+ ensureLirrLayers();
+ for(const kind of ['routes','stations']){
+  const layer=state.lirrLayers[kind];
+  if(state.overlays.lirr&&state.lirr[kind]){
+   if(!state.map.hasLayer(layer))layer.addTo(state.map);
+  }else{
+   state.lirrAborts[kind]?.abort();
+   if(state.map.hasLayer(layer))state.map.removeLayer(layer);
+  }
+ }
+ if(state.overlays.lirr)loadLirr();
+ else lirrStatus('LIRR overlay off');
+}
+async function loadLirr(){
+ if(!state.overlays.lirr||!state.map)return;
+ ensureLirrLayers();
+ const zoom=state.map.getZoom();
+ if(zoom<11){
+  for(const kind of ['routes','stations'])state.lirrLayers[kind].clearLayers();
+  lirrStatus('Zoom in to see LIRR lines and stops');return;
+ }
+ const bounds=state.map.getBounds();
+ const geometry=JSON.stringify({xmin:bounds.getWest(),ymin:bounds.getSouth(),xmax:bounds.getEast(),ymax:bounds.getNorth(),spatialReference:{wkid:4326}});
+ const token=++state.lirrLoadToken,results={};
+ await Promise.all(['routes','stations'].map(async kind=>{
+  if(!state.lirr[kind])return;
+  const controller=new AbortController();state.lirrAborts[kind]?.abort();state.lirrAborts[kind]=controller;
+  const layer=state.lirrLayers[kind];
+  const params={f:'geojson',where:'1=1',outFields:'*',geometry,geometryType:'esriGeometryEnvelope',inSR:4326,outSR:4326,spatialRel:'esriSpatialRelIntersects',resultOffset:0,resultRecordCount:1500};
+  try{
+   let features=[];
+   for(let page=0;page<3;page++){
+    params.resultOffset=page*1500;
+    const data=await fetchJSON(LIRR_API[kind],params,controller.signal);
+    const batch=data.features||[];
+    features.push(...batch);
+    if(batch.length<1500&&!data.exceededTransferLimit)break;
+   }
+   if(controller.signal.aborted||token!==state.lirrLoadToken||!state.overlays.lirr||!state.lirr[kind])return;
+   if(kind==='stations'){
+    const seen=new Set();
+    features=features.filter(f=>{
+     const p=f.properties||{},xy=f.geometry?.coordinates||[];
+     const key=String(p.stop_name||p.station_name||p.name||'').toLowerCase()+'|'+(Number(xy[0])||0).toFixed(3)+'|'+(Number(xy[1])||0).toFixed(3);
+     if(seen.has(key))return false;seen.add(key);return true;
+    });
+   }
+   layer.clearLayers();layer.addData({type:'FeatureCollection',features});
+   results[kind]=features.length;
+  }catch(e){
+   if(controller.signal.aborted||e.name==='AbortError')return;
+   results[kind]='Error: '+e.message;
+  }
+ }));
+ if(token!==state.lirrLoadToken||!state.overlays.lirr)return;
+ bringTransitForward();
+ const errors=Object.entries(results).filter(([k,v])=>typeof v==='string');
+ if(errors.length)lirrStatus(errors.map(([k,v])=>k+' '+v).join(' · '),'error');
+ else lirrStatus(Object.entries(results).map(([k,v])=>v+' '+k).join(' · ')+' shown','good');
+}
 function updateOverlayStatus(){
- const active=['transit','buildings','aerial'].filter(id=>state.overlays[id]);
+ const active=['transit','lirr','buildings','aerial'].filter(id=>state.overlays[id]);
  baseStatus('Street basemap · '+(active.length?active.join(' + ')+' enabled':'no optional overlays'));
 }
 function toggleOverlay(id,enabled){
- if(!state.map||!['transit','buildings','aerial'].includes(id))return;
+ if(!state.map||!['transit','lirr','buildings','aerial'].includes(id))return;
  state.overlays[id]=Boolean(enabled);
  if(id==='transit'){
   if(enabled&&!state.subway.routes&&!state.subway.stations){
@@ -513,6 +622,13 @@ function toggleOverlay(id,enabled){
    for(const name of ['routes','stations']){const cb=el('transit-'+name);if(cb)cb.checked=true}
   }
   syncTransitVisibility();
+ }
+ if(id==='lirr'){
+  if(enabled&&!state.lirr.routes&&!state.lirr.stations){
+   state.lirr.routes=true;state.lirr.stations=true;
+   for(const kind of ['routes','stations']){const cb=el('lirr-'+kind);if(cb)cb.checked=true}
+  }
+  syncLirrVisibility();
  }
  if(id==='buildings'){
   if(enabled)loadBuildingFootprints();else dropBuildingLayer();
@@ -658,7 +774,7 @@ function makeLayer(item){
  });
 }
 function source(item){return ROOT+item.source+'/FeatureServer/'+(item.layer||0)}
-function onVisibleViewport(){clearTimeout(state.loaded);state.loaded=setTimeout(()=>{for(const entry of state.active.values())if(entry.item)load(entry.item);if(state.overlays.buildings)loadBuildingFootprints();if(state.overlays.transit)loadTransit()},420)}
+function onVisibleViewport(){clearTimeout(state.loaded);state.loaded=setTimeout(()=>{for(const entry of state.active.values())if(entry.item)load(entry.item);if(state.overlays.buildings)loadBuildingFootprints();if(state.overlays.transit)loadTransit();if(state.overlays.lirr)loadLirr()},420)}
 async function fetchJSON(url,params={},signal){
  const u=new URL(url);for(const [k,v] of Object.entries(params))u.searchParams.set(k,String(v));
  const response=await fetch(u,{signal});if(!response.ok)throw Error('HTTP '+response.status);
