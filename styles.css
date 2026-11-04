@@ -419,3 +419,23 @@
 @media(prefers-reduced-motion:reduce){
  .side-panel{transition:none!important}
 }
+
+/* V16: basemap options are independent overlays, not exclusive radio choices. */
+#layer-tree .basemap-row{display:flex;align-items:center;gap:8px;min-width:0}
+#layer-tree .basemap-row input[type=checkbox]{width:16px;height:16px;flex:0 0 16px;accent-color:#65398a}
+#layer-tree .basemap-row>span:not(.catalog-unavailable){min-width:0;overflow-wrap:anywhere}
+#layer-tree .basemap-child-options{display:grid;grid-template-columns:1fr 1fr;gap:7px 5px;padding:3px 14px 9px 39px;min-width:0}
+#layer-tree .basemap-child{display:flex;align-items:center;gap:6px;min-height:28px;font-size:11px;white-space:normal;min-width:0;cursor:pointer}
+#layer-tree .basemap-child input{width:15px;height:15px;flex:0 0 15px;accent-color:#63358f}
+#layer-tree #transit-layer-status{grid-column:1/-1;font-size:10px;color:#676170;padding:3px 0;line-height:1.4}
+#layer-tree #transit-layer-status[data-kind=good]{color:#2a7556}
+#layer-tree #transit-layer-status[data-kind=error]{color:#9d3d3a}
+#layer-tree .aerial-year-grid{margin-left:0;padding-top:3px}
+#layer-tree .aerial-year-grid label{min-height:28px}
+@media(max-width:740px){
+ #layer-tree .basemap-row{min-height:45px}
+ #layer-tree .basemap-row input[type=checkbox]{height:18px;width:18px;flex-basis:18px}
+ #layer-tree .basemap-child-options{padding-left:28px;grid-template-columns:1fr 1fr;gap:6px}
+ #layer-tree .basemap-child{min-height:39px;font-size:12px}
+ #layer-tree .basemap-child input{height:18px;width:18px;flex-basis:18px}
+}
