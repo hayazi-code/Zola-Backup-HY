@@ -776,10 +776,9 @@ function makeLayer(item){
 function source(item){return ROOT+item.source+'/FeatureServer/'+(item.layer||0)}
 function onVisibleViewport(){clearTimeout(state.loaded);state.loaded=setTimeout(()=>{for(const entry of state.active.values())if(entry.item)load(entry.item);if(state.overlays.buildings)loadBuildingFootprints();if(state.overlays.transit)loadTransit();if(state.overlays.lirr)loadLirr()},420)}
 async function fetchJSON(url,params={},signal){
- const u=new URL(url);for(const [k,v] of Object.entries(params))u.searchParams.set(k,String(v));
- const response=await fetch(u,{signal});if(!response.ok)throw Error('HTTP '+response.status);
- const data=await response.json();if(data.error)throw Error(data.error.message||'ArcGIS error');return data;
+ return window.ZOLA_GIS.request(url,params,signal,{cache:true});
 }
+
 async function load(item){
  const entry=state.active.get(item.id);if(!entry||!state.map)return;
  if(entry.abort)entry.abort.abort();
