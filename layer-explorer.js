@@ -2,59 +2,97 @@
 (function(){
 'use strict';
 const ROOT='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/';
-const Z=(id,name,opts={})=>({id,name,group:'Zoning and land use',minZoom:13,...opts});
-const S=(id,name,opts={})=>({id,name,group:'Supporting zoning layers',minZoom:12,...opts});
-const O=(id,name,opts={})=>({id,name,group:'Other supporting layers',minZoom:12,...opts});
-const A=(id,name,opts={})=>({id,name,group:'Administrative boundaries',minZoom:11,...opts});
-const T=(id,name,opts={})=>({id,name,group:'Transportation',minZoom:13,...opts});
-const ITEMS=[
- Z('lots','Tax lots',{core:'lots',source:'MAPPLUTO',minZoom:16,checked:true}),
- Z('landuse','Show land use colors',{core:'landuse',source:'MAPPLUTO',minZoom:16}),
- Z('zoning','Zoning districts',{core:'zoning',source:'nyzd',checked:true,color:'#f7d88c'}),
- Z('c-zones','Commercial zoning districts',{source:'nyzd',where:"ZONEDIST LIKE 'C%'",field:'ZONEDIST',color:'#e78c93',minZoom:12}),
- Z('m-zones','Manufacturing zoning districts',{source:'nyzd',where:"ZONEDIST LIKE 'M%'",field:'ZONEDIST',color:'#ab90c4',minZoom:12}),
- Z('commercial','Commercial overlays',{core:'commercial',source:'nyco',minZoom:14,color:'#ce4f75'}),
- Z('c1-overlays','C1 commercial overlays',{source:'nyco',where:"OVERLAY LIKE 'C1-%'",field:'OVERLAY',color:'#f09caa',minZoom:14}),
- Z('c2-overlays','C2 commercial overlays',{source:'nyco',where:"OVERLAY LIKE 'C2-%'",field:'OVERLAY',color:'#de608d',minZoom:14}),
- Z('zoning-index','Zoning map index',{source:'Zoning_Index_Map',layer:0,field:'',minZoom:11,color:'#536cb2',outline:true}),
- Z('zma','Zoning map amendments',{source:'nyzma',minZoom:12,color:'#ed8a38',outline:true}),
- Z('certified-zma','Certified (pending) map amendments',{source:'nyzma',where:"STATUS = 'Certified'",field:'PROJECT_NAME',minZoom:11,color:'#e86136',outline:true}),
- Z('special','Special purpose districts',{core:'special',source:'nysp',color:'#795ca8'}),
- Z('subdistrict','Special purpose subdistricts',{core:'subdistrict',source:'nysp_sd',color:'#a07ebc'}),
- Z('open-spaces','Open spaces (planning screening)',{source:'v_GFT_Open_Spaces',minZoom:13,color:'#7ab885',note:'Planning screening layer, not a formal NYC Parks boundary.'}),
- Z('park-city','Battery Park City',{available:false,note:'Specific boundary source not yet integrated.'}),
- S('mih','Mandatory Inclusionary Housing areas',{core:'mih',source:'nycmih',color:'#2d997e'}),
- S('inclusionary','Inclusionary Housing designated areas',{source:'nyih',color:'#4a9875'}),
- S('greater-transit','Greater Transit Zone',{source:'Greater_Transit_Zone',color:'#329fbc'}),
- S('transit-zones','Transit zones',{source:'ZoLa_TransitZones',color:'#4d98bf'}),
- S('accessibility','Zoning for Accessibility',{available:false,note:'No validated public polygon dataset connected.'}),
- S('fresh-zones','FRESH zones',{available:false,note:'No verified FRESH eligibility-zone service connected.'}),
- S('limited-height','Limited Height Districts',{source:'nylh',color:'#bb7a63'}),
- S('low-density','Lower Density Growth Management Areas',{source:'nyldgma',color:'#c5a854'}),
- S('coastal','Waterfront Revitalization Program boundary',{source:'WRP_Final',color:'#4d97b7',outline:true,note:'WRP boundary; not equivalent to every ZoLa coastal-zone sublayer.'}),
- S('waterfront','Waterfront Access Plan',{source:'nywap',color:'#3988ab'}),
- S('historic','Historic districts (planning screening)',{source:'v_GFT_Historic_Districts',color:'#8e6ba7',note:'DCP screening data. Confirm designation with LPC.'}),
- S('landmarks','Historic resources (planning screening)',{source:'v_GFT_Historic_Resources',color:'#9865a6',note:'Not a substitute for an official LPC search.'}),
- S('flood','FEMA flood hazard areas',{source:'S_FLD_HAZ_AR',color:'#639bca'}),
- S('firm2007','2007 effective flood insurance maps',{source:'2007_Effective_FIRMs',minZoom:12,color:'#5f87bb',note:'Historic 2007 FIRM geography; check current FEMA maps for official flood determinations.'}),
- S('pfirms2015','2015 preliminary flood insurance maps',{available:false,note:'Dedicated preliminary FIRM polygon source not yet verified.'}),
- S('edesignations','Environmental designations',{source:'nyedesignations',color:'#d68e3a'}),
- S('appendix-i','Appendix I',{available:false,note:'Appendix I designation dataset not yet verified.'}),
- S('appendix-j','Appendix J designated M districts',{available:false,note:'Dedicated source not yet verified.'}),
- O('bids','Business Improvement Districts',{source:'BIDs',color:'#a06dad'}),
- O('industrial','Designated industrial areas',{source:'Designated_Industrial_Areas_Final',color:'#9273b3',note:'Planning industrial-area layer; IBZ designations need separate validation.'}),
- O('water-access','Waterfront public access areas',{source:'nywpaa',color:'#4c96bd'}),
- A('boroughs','Borough boundaries',{source:'NYC_Borough_Boundary',color:'#596f93',outline:true,minZoom:9}),
- A('community','NYC community districts',{source:'NYC_Community_Districts',color:'#ad6a56',outline:true,minZoom:10}),
- A('council','NYC Council districts',{source:'NYC_City_Council_Districts',color:'#8e68a6',outline:true,minZoom:10}),
- A('senate','NY State Senate districts',{source:'NYC_State_Senate_Districts',color:'#377c94',outline:true,minZoom:10}),
- A('assembly','NY State Assembly districts',{source:'NYC_State_Assembly_Districts',color:'#578f68',outline:true,minZoom:10}),
- A('ntas','Neighborhood Tabulation Areas 2020',{source:'NYC_Neighborhood_Tabulation_Areas_2020',color:'#a87349',outline:true,minZoom:11}),
- A('census','2020 census tracts',{source:'NYC_Census_Tracts_for_2020_US_Census',color:'#8796ac',outline:true,minZoom:13}),
- T('subway-lines','Subway lines',{source:'SubwayLines_share',color:'#3377a2',minZoom:11}),
- T('subway-stations','Subway stations',{source:'SubwayStations_share',color:'#3377a2',minZoom:13}),
- T('rail-lines','Other active rail lines',{source:'NYNJ_Active_Rail_Lines',color:'#71616c',minZoom:11})
+// The five top-level sections and every nested item follow the supplied ZoLa screenshots.
+const N=(id,name,opts={})=>({id,name,...opts});
+const Z=(id,name,opts={})=>N(id,name,{minZoom:13,...opts});
+const S=(id,name,opts={})=>N(id,name,{minZoom:12,...opts});
+const A=(id,name,opts={})=>N(id,name,{minZoom:11,...opts});
+const range=(prefix,labels)=>labels.map(s=>N(prefix+'-'+s,s,{checked:true,kind:'filter'}));
+const zones=(kind,from,to)=>range('zone',Array.from({length:to-from+1},(_,i)=>kind+(from+i)));
+const overlays=(kind)=>range('overlay',Array.from({length:5},(_,i)=>kind+'-'+(i+1)));
+const GROUPS=[
+ {name:'Zoning and Land Use',count:8,items:[
+  Z('lots','Tax Lots',{core:'lots',source:'MAPPLUTO',minZoom:16,checked:true,swatch:'#c77f4e'}),
+  Z('landuse','Show Land Use Colors',{core:'landuse',source:'MAPPLUTO',minZoom:16,swatch:'#9ca3af'}),
+  Z('zoning','Zoning Districts',{core:'zoning',source:'nyzd',checked:true,swatch:'#db954f',expanded:true,children:[
+   N('commercial-districts','Commercial Districts',{checked:true,filterGroup:true,swatch:'#e88d94',expanded:true,children:zones('C',1,8)}),
+   N('manufacturing-districts','Manufacturing Districts',{checked:true,filterGroup:true,swatch:'#b6a0cf',expanded:true,children:zones('M',1,3)}),
+   N('residence-districts','Residence Districts',{checked:true,filterGroup:true,swatch:'#ecd081',expanded:true,children:zones('R',1,10)}),
+   N('parks','Parks',{checked:true,kind:'filter',swatch:'#a5d09c'}),
+   N('battery-park-city','Battery Park City',{kind:'filter',checked:true,available:false,note:'The standalone Battery Park City boundary is not yet connected.',swatch:'#ababab'})
+  ]}),
+  Z('commercial','Commercial Overlays',{core:'commercial',source:'nyco',minZoom:14,swatch:'#e16a90',expanded:true,children:[
+   N('overlay-c1','C1-1 through C1-5',{checked:true,filterGroup:true,expanded:true,children:overlays('C1')}),
+   N('overlay-c2','C2-1 through C2-5',{checked:true,filterGroup:true,expanded:true,children:overlays('C2')})
+  ]}),
+  Z('zoning-index','Zoning Map Index',{source:'Zoning_Index_Map',minZoom:11,color:'#536cb2',swatch:'#8489ad',outline:true}),
+  Z('zma','Zoning Map Amendments',{source:'nyzma',minZoom:12,color:'#ed8a38',swatch:'#99b27d',outline:true,timeline:true}),
+  Z('pending-zma','Pending Zoning Map Amendments',{available:false,swatch:'#e27370',note:'A verified current pending-application map feed has not yet been connected.'}),
+  Z('special','Special Purpose Districts',{core:'special',source:'nysp',swatch:'#617849',color:'#795ca8'}),
+  Z('subdistrict','Special Purpose Subdistricts',{core:'subdistrict',source:'nysp_sd',swatch:'#8eaf39',color:'#a07ebc'})
+ ]},
+ {name:'Supporting Zoning Layers',count:17,items:[
+  S('mih','Mandatory Inclusionary Housing Areas',{core:'mih',source:'nycmih',swatch:'#d56a55',color:'#2d997e'}),
+  S('inclusionary','Inclusionary Housing Designated Areas',{source:'nyih',swatch:'#dbb49a',color:'#4a9875'}),
+  S('accessibility','Zoning for Accessibility',{available:false,swatch:'#f0bb85',note:'A public feature layer for the precise ZoLa geography has not been verified.'}),
+  S('greater-transit','Greater Transit Zone',{source:'Greater_Transit_Zone',swatch:'#ef987c',color:'#329fbc'}),
+  S('transit-parking','Transit Zones Parking Geographies',{source:'ZoLa_TransitZones',swatch:'#e5b59c',color:'#4d98bf',expanded:true,children:[
+   N('parking-mn-lic','MN Core and LIC Parking Areas',{kind:'filter',checked:true,swatch:'#ddc5e3'}),
+   N('parking-inner','Inner Transit Zone',{kind:'filter',checked:true,swatch:'#a8bed5'}),
+   N('parking-outer','Outer Transit Zone',{kind:'filter',checked:true,swatch:'#b5dfec'}),
+   N('parking-special','Special 25-241 Parking Provisions',{kind:'filter',checked:true,swatch:'#d7ece5'}),
+   N('parking-beyond','Beyond the Greater Transit Zone',{kind:'filter',checked:true,swatch:'#90c9cc'})
+  ],note:'Subarea category filtering requires validation against the layer fields.'}),
+  S('fresh-zones','FRESH Zones',{available:false,swatch:'#e4ceac',expanded:true,note:'FRESH geographic service is not yet verified.',children:[
+   N('fresh-zoning','Zoning incentives',{available:false,swatch:'#c2ebe3'}),
+   N('fresh-both','Zoning and discretionary tax incentives',{available:false,swatch:'#b7dbc7'}),
+   N('fresh-tax','Discretionary tax incentives',{available:false,swatch:'#dceab5'})
+  ]}),
+  S('limited-height','Limited Height Districts',{source:'nylh',swatch:'#c6b6a9',color:'#bb7a63'}),
+  S('low-density','Lower Density Growth Management Areas',{source:'nyldgma',swatch:'#debf9b',color:'#c5a854'}),
+  S('coastal','Coastal Zone Boundary',{source:'WRP_Final',swatch:'#91cbd8',color:'#4d97b7',outline:true,note:'Uses Waterfront Revitalization Program boundary; coastal equivalence requires verification.'}),
+  S('waterfront','Waterfront Access Plan',{source:'nywap',swatch:'#a4d2e3',color:'#3988ab'}),
+  S('historic','Historic Districts',{source:'v_GFT_Historic_Districts',swatch:'#a9d4b6',color:'#8e6ba7',note:'Planning screening data; confirm with LPC.'}),
+  S('landmarks','Landmarks',{source:'v_GFT_Historic_Resources',swatch:'#ac9fd1',color:'#9865a6',expanded:true,note:'Historic-resource screening data; exact landmark-type subtype mapping is provisional.',children:[
+   N('landmark-individual','Individual Landmarks',{kind:'filter',checked:true,swatch:'#9be0bf'}),
+   N('landmark-interior','Interior Landmarks',{kind:'filter',checked:true,swatch:'#c6a0ee'}),
+   N('landmark-scenic','Scenic Landmarks',{kind:'filter',checked:true,swatch:'#a5a3e8'})
+  ]}),
+  S('firm2007','Effective Flood Insurance Rate Maps 2007',{source:'2007_Effective_FIRMs',swatch:'#9bc6da',color:'#5f87bb',expanded:true,note:'Historic 2007 flood layer; do not use for current FEMA determinations.',children:[
+   N('flood07-v','V (1% floodplain)',{kind:'filter',checked:true,swatch:'#4ebbd0'}),
+   N('flood07-a','A (1% floodplain)',{kind:'filter',checked:true,swatch:'#84d9c9'}),
+   N('flood07-x','Shaded X (0.2% floodplain)',{kind:'filter',checked:true,swatch:'#5bd6c5'})
+  ]}),
+  S('pfirms2015','Preliminary Flood Insurance Rate Maps 2015',{available:false,swatch:'#c5e0e9',expanded:true,note:'A validated preliminary 2015 FIRM feature service has not yet been connected.',children:[
+   N('flood15-v','V (1% floodplain)',{available:false,swatch:'#48b9cf'}),
+   N('flood15-a','A (1% floodplain)',{available:false,swatch:'#83d4c4'}),
+   N('flood15-x','Shaded X (0.2% floodplain)',{available:false,swatch:'#52d8c1'})
+  ]}),
+  S('edesignations','Environmental Designations',{source:'nyedesignations',swatch:'#eab08c',color:'#d68e3a',children:[
+   N('edesignation-item','Environmental Designations',{kind:'filter',checked:true,swatch:'#b29aca'})
+  ]}),
+  S('appendix-i','Appendix I',{available:false,swatch:'#e9b9af',note:'No validated standalone Appendix I map service.'}),
+  S('appendix-j','Appendix J Designated M Districts',{available:false,swatch:'#be96a4',note:'No validated Appendix J mapped district service.'})
+ ]},
+ {name:'Other Supporting Layers',count:2,items:[
+  S('bids','Business Improvement Districts',{source:'BIDs',swatch:'#e6bb9e',color:'#a06dad'}),
+  S('ibz','Industrial Business Zones',{source:'Industry_in_NYC_WFL',layer:0,swatch:'#d9b48b',color:'#9273b3'})
+ ]},
+ {name:'Administrative Boundaries',count:6,items:[
+  A('boroughs','Boroughs',{source:'NYC_Borough_Boundary',swatch:'#d1a15b',color:'#596f93',outline:true,minZoom:9}),
+  A('community','Community Districts',{source:'NYC_Community_Districts',swatch:'#abc462',color:'#ad6a56',outline:true,minZoom:10}),
+  A('council','NYC Council Districts',{source:'NYC_City_Council_Districts',swatch:'#beadcf',color:'#8e68a6',outline:true,minZoom:10,expanded:true,children:[
+    N('council-old','2013-2023',{available:false,swatch:'#609cc6',note:'Historic Council district version not yet linked.'}),
+    N('council-new','2024-2033',{kind:'filter',checked:true,swatch:'#f28ea8'})
+  ]}),
+  A('senate','NY State Senate Districts',{source:'NYC_State_Senate_Districts',swatch:'#ab8bc2',color:'#377c94',outline:true,minZoom:10}),
+  A('assembly','NY State Assembly Districts',{source:'NYC_State_Assembly_Districts',swatch:'#ce93b9',color:'#578f68',outline:true,minZoom:10}),
+  A('ntas','Neighborhood Tabulation Areas',{source:'NYC_Neighborhood_Tabulation_Areas_2020',swatch:'#c39cb6',color:'#a87349',outline:true,minZoom:11})
+ ]}
 ];
+const ITEMS=GROUPS.flatMap(g=>g.items.map(item=>({...item,group:g.name})));
+const YEAR_OPTIONS=['2024','2022','2020','2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924'];
+const VERIFIED_YEARS=new Set(['2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924']);
 const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0};
 const el=id=>document.getElementById(id),sr=(a)=>String(a??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const baseOptions={
