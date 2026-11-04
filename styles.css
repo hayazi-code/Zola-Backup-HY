@@ -118,3 +118,82 @@
 /* Match ZoLa category swatches at every nesting level. */
 .catalog-grid-children .catalog-swatch{display:inline-block;width:7px;height:7px;flex:0 0 7px}
 .catalog-grid-children .catalog-label{gap:3px}
+
+/* Fix 2026-11-04: long ZoLa sublayer names never overlap or force horizontal scroll. */
+.layer-group, .layer-group-items, .catalog-node, .catalog-children, .catalog-label, .catalog-row{min-width:0;max-width:100%}
+.side-panel,.side-scroll,.catalog-section,#layer-tree{min-width:0;overflow-x:hidden}
+.catalog-children.catalog-grid-children{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:3px 0;
+  margin:1px 12px 9px 38px;
+  min-width:0;
+}
+.catalog-grid-children>.catalog-node{min-width:0}
+.catalog-grid-children>.catalog-node>.catalog-row{
+  width:100%;
+  min-width:0;
+  min-height:26px;
+  display:flex;
+  padding:4px 5px;
+  align-items:flex-start;
+}
+.catalog-grid-children .catalog-label{
+  white-space:normal;
+  min-width:0;
+  max-width:100%;
+  display:flex;
+  flex:1 1 auto;
+  align-items:flex-start;
+  gap:7px;
+  line-height:1.35;
+  overflow-wrap:break-word;
+  word-break:normal;
+  font-size:11px;
+}
+.catalog-grid-children .catalog-label span{min-width:0;overflow-wrap:break-word;white-space:normal}
+.catalog-grid-children .catalog-label input{flex:0 0 13px;margin:1px 0 0}
+.catalog-grid-children .catalog-swatch{display:inline-block;flex:0 0 9px;width:9px;height:9px;margin-top:2px}
+.catalog-row .catalog-label>span{min-width:0;overflow-wrap:anywhere}
+.catalog-meta{flex:0 0 auto}
+.catalog-row.catalog-depth-2{padding-left:5px}
+.catalog-row.catalog-depth-2 .catalog-label{white-space:normal}
+/* Only compact zoning codes should be displayed in multiple columns. */
+.catalog-node[data-layer-id="commercial-districts"]>.catalog-children.catalog-grid-children,
+.catalog-node[data-layer-id="manufacturing-districts"]>.catalog-children.catalog-grid-children,
+.catalog-node[data-layer-id="residence-districts"]>.catalog-children.catalog-grid-children,
+.catalog-node[data-layer-id="overlay-c1"]>.catalog-children.catalog-grid-children,
+.catalog-node[data-layer-id="overlay-c2"]>.catalog-children.catalog-grid-children{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  margin:2px 8px 8px 28px;
+  gap:3px;
+}
+.catalog-node[data-layer-id="commercial-districts"] .catalog-grid-children .catalog-label,
+.catalog-node[data-layer-id="manufacturing-districts"] .catalog-grid-children .catalog-label,
+.catalog-node[data-layer-id="residence-districts"] .catalog-grid-children .catalog-label,
+.catalog-node[data-layer-id="overlay-c1"] .catalog-grid-children .catalog-label,
+.catalog-node[data-layer-id="overlay-c2"] .catalog-grid-children .catalog-label{font-size:10px;white-space:nowrap}
+.catalog-node[data-layer-id="transit-parking"]>.catalog-children.catalog-grid-children,
+.catalog-node[data-layer-id="fresh-zones"]>.catalog-children.catalog-grid-children,
+.catalog-node[data-layer-id="landmarks"]>.catalog-children.catalog-grid-children,
+.catalog-node[data-layer-id="firm2007"]>.catalog-children.catalog-grid-children,
+.catalog-node[data-layer-id="pfirms2015"]>.catalog-children.catalog-grid-children,
+.catalog-node[data-layer-id="council"]>.catalog-children.catalog-grid-children{
+  grid-template-columns:minmax(0,1fr)!important;
+  margin-left:35px;
+}
+.aerial-year-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 5px}
+.aerial-year{min-width:0;overflow-wrap:anywhere;white-space:normal}
+.basemap-note{padding:5px 20px 10px 35px;color:#746f7a;font-size:10px;line-height:1.45}
+.basemap-status{display:block;margin:6px 10px 10px 27px;padding:8px;background:#f5f3f8;border-radius:4px;font-size:11px;color:#554863}
+.basemap-status[data-kind=error]{background:#fff0ec;color:#a63a30}
+.basemap-status[data-kind=good]{background:#eff8f4;color:#216d4c}
+@media(max-width:740px){
+ .catalog-children.catalog-grid-children{margin-left:26px;margin-right:10px}
+ .catalog-node[data-layer-id="transit-parking"]>.catalog-children.catalog-grid-children,
+ .catalog-node[data-layer-id="fresh-zones"]>.catalog-children.catalog-grid-children,
+ .catalog-node[data-layer-id="landmarks"]>.catalog-children.catalog-grid-children,
+ .catalog-node[data-layer-id="firm2007"]>.catalog-children.catalog-grid-children,
+ .catalog-node[data-layer-id="pfirms2015"]>.catalog-children.catalog-grid-children,
+ .catalog-node[data-layer-id="council"]>.catalog-children.catalog-grid-children{margin-left:22px}
+}
