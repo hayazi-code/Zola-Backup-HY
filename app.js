@@ -347,6 +347,12 @@ async function shareLot(b){
  try{await navigator.clipboard.writeText(u.href);notice('Property link copied.','good')}
  catch(e){window.prompt('Copy property link',u.href)}
 }
+function updateNetworkMetrics(){
+ const api=window.ZOLA_GIS,host=DOM('network-metrics');
+ if(!api||!host)return;
+ const m=api.stats;
+ host.textContent=m.network+' network requests · '+m.cacheHits+' cache hits · '+m.retries+' retries · '+m.failures+' failed · '+api.cacheSize()+' cached responses · peak '+m.peakActive+'/'+api.config.concurrency+' concurrent';
+}
 function bindControls(){
  for(const key of Object.keys(flags)){const input=DOM('layer-'+key);if(input)input.onchange=onFlagsChange}
  DOM('search-button').onclick=runSearch;DOM('search').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}if(e.key==='Escape')DOM('suggestions').hidden=true};
@@ -361,7 +367,9 @@ function bindControls(){
  const boroughs={manhattan:[40.756,-73.98,14],bronx:[40.846,-73.888,13],brooklyn:[40.674,-73.95,14],queens:[40.736,-73.81,13],staten:[40.584,-74.148,13]};
  for(const [name,[lat,lng,zoom]] of Object.entries(boroughs))DOM('goto-'+name).onclick=()=>map.setView([lat,lng],zoom);
  document.addEventListener('click',e=>{if(!e.target.closest('.search-field'))DOM('suggestions').hidden=true});
- DOM('info-button').onclick=()=>DOM('about-modal').showModal();DOM('about-close').onclick=()=>DOM('about-modal').close();
+ DOM('info-button').onclick=()=>{updateNetworkMetrics();DOM('about-modal').showModal()};
+ DOM('clear-gis-cache').onclick=()=>{window.ZOLA_GIS?.clearCache();updateNetworkMetrics();notice('Temporary GIS cache cleared. New map requests will fetch fresh public data.','good')};
+ DOM('about-close').onclick=()=>DOM('about-modal').close();
 }
 function start(){
  map=L.map('map',{zoomControl:false,preferCanvas:true}).setView([40.674,-73.955],14);
