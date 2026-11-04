@@ -151,6 +151,9 @@ function deselectAllLayers(){
  for(const entry of [...state.active.values()]){
   if(entry.item)deactivate(entry.item);
  }
+ // Keep the master reset synchronized with independently toggleable basemap overlays.
+ for(const id of ['transit','buildings','aerial'])toggleOverlay(id,false);
+ state.subway.routes=false;state.subway.stations=false;
  const labels=el('labels-on');
  if(labels){labels.checked=false;state.map?.getContainer().classList.add('hide-zoning-labels')}
  window.ZOLA_SYNC_CHILDREN?.();
@@ -458,7 +461,13 @@ function updateOverlayStatus(){
 function toggleOverlay(id,enabled){
  if(!state.map||!['transit','buildings','aerial'].includes(id))return;
  state.overlays[id]=Boolean(enabled);
- if(id==='transit')syncTransitVisibility();
+ if(id==='transit'){
+  if(enabled&&!state.subway.routes&&!state.subway.stations){
+   state.subway.routes=true;state.subway.stations=true;
+   for(const name of ['routes','stations']){const cb=el('transit-'+name);if(cb)cb.checked=true}
+  }
+  syncTransitVisibility();
+ }
  if(id==='buildings'){
   if(enabled)loadBuildingFootprints();else dropBuildingLayer();
  }
