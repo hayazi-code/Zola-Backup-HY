@@ -3,7 +3,7 @@
    Only successful responses are cached; feature data remains sourced from public agencies. */
 (function(){
  'use strict';
- const LIMIT=5,MAX_CACHE=75,TTL=90000,DEFAULT_TIMEOUT=14000;
+ const LIMIT=5,MAX_CACHE=40,TTL=60000,DEFAULT_TIMEOUT=14000;
  const queue=[],cache=new Map(),stats={network:0,cacheHits:0,failures:0,retries:0,peakActive:0};
  let active=0;
  class TimeoutError extends Error{constructor(){super('Request timed out');this.name='TimeoutError'}}
@@ -58,7 +58,8 @@
      retry=[429,500,502,503,504].includes(Number(data.error.code));
      throw new Error('GIS service error: '+String(data.error.message||data.error.code));
     }
-    if(cacheable)cacheSet(url,data);
+    // Avoid retaining exceptionally large map responses in phone memory.
+    if(cacheable&&(!Array.isArray(data.features)||data.features.length<=2000))cacheSet(url,data);
     return data;
    }catch(error){
     if(signal?.aborted)throw new DOMException('Request aborted','AbortError');
