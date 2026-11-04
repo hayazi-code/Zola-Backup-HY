@@ -142,7 +142,7 @@ function updateMapLegend(){
  if(flags.landuse){
   host.innerHTML='<strong>Land Use · NYC DCP Standard</strong>'+
    '<div class="landuse-key-grid">'+
-   Object.entries(LOT_COLORS).map(([code,hex])=>
+   Array.from({length:11},(_,i)=>String(i+1).padStart(2,'0')).map(code=>[code,LOT_COLORS[code]]).map(([code,hex])=>
     '<span><i class="key-swatch" style="background:'+hex+'"></i><span>'+
     safe(code+' · '+LOT_USES[code])+'</span></span>').join('')+
    '<span><i class="key-swatch" style="background:'+UNKNOWN_LANDUSE_COLOR+'"></i><span>Other / No Data</span></span>'+
