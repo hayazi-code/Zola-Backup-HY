@@ -315,7 +315,7 @@ function dropBuildingLayer(){
  if(state.buildingLayer){state.map.removeLayer(state.buildingLayer);state.buildingLayer=null}
 }
 async function loadBuildingFootprints(){
- if(state.mode!=='buildings'||!state.map)return;
+ if(!state.overlays.buildings||!state.map)return;
  const map=state.map;
  state.buildingAbort?.abort();
  if(!state.buildingLayer){
@@ -347,7 +347,7 @@ async function loadBuildingFootprints(){
    if(batch.length<1500&&!result.exceededTransferLimit)break;
    if(i===2)truncated=true;
   }
-  if(ac.signal.aborted||token!==state.buildingToken||state.mode!=='buildings')return;
+  if(ac.signal.aborted||token!==state.buildingToken||!state.overlays.buildings)return;
   state.buildingLayer.clearLayers();
   state.buildingLayer.addData({type:'FeatureCollection',features});
   state.buildingLayer.bringToFront();
@@ -358,49 +358,145 @@ async function loadBuildingFootprints(){
   baseStatus('Building footprint service unavailable: '+e.message+'. Street map remains visible.','error');
  }
 }
-function setBasemap(id){
- const def=baseOptions[id];if(!def||!state.map)return;
+const SUBWAY_ROOT='https://services.arcgis.com/5e8P2PHwGNSRUvq3/ArcGIS/rest/services/New_York_City_Region_Transit_Layers/FeatureServer/';
+const SUBWAY_API={routes:SUBWAY_ROOT+'6/query',stations:SUBWAY_ROOT+'0/query'};
+const SUBWAY_COLORS={'1':'#EE352E','2':'#EE352E','3':'#EE352E','4':'#00933C','5':'#00933C','6':'#00933C','7':'#B933AD','A':'#0039A6','C':'#0039A6','E':'#0039A6','B':'#FF6319','D':'#FF6319','F':'#FF6319','M':'#FF6319','G':'#6CBE45','J':'#996633','Z':'#996633','L':'#A7A9AC','N':'#FCCC0A','Q':'#FCCC0A','R':'#FCCC0A','W':'#FCCC0A','S':'#808183'};
+function transitStatus(message,kind=''){
+ const out=el('transit-layer-status');if(out){out.textContent=message;out.dataset.kind=kind}
+}
+function subwayColor(feature){
+ const p=feature.properties||{};
+ const raw=String(p.short_name||p.route_short_name||p.route_id||p.route||'').toUpperCase().trim();
+ const first=raw.match(/[A-Z0-9]+/)?.[0]||'';
+ return SUBWAY_COLORS[first]||'#547b9d';
+}
+function ensureTransitLayers(){
+ if(state.transitLayers.routes&&state.transitLayers.stations)return;
  const map=state.map;
- ++state.baseLoadToken;const token=state.baseLoadToken;
- dropBuildingLayer();
- state.mode=id;
- map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});
- let year=state.aerialYear||'current';
- const historic=id==='aerial'&&year!=='current';
- const url=historic?'https://maps.nyc.gov/xyz/1.0.0/photo/'+encodeURIComponent(year)+'/{z}/{x}/{y}.png8':def.url;
- const attribution=historic?'&copy; City of New York historical imagery '+year:def.attribution;
- const base=L.tileLayer(url,{attribution,maxZoom:20,maxNativeZoom:def.maxNativeZoom,updateWhenIdle:true}).addTo(map);
- base.bringToBack();
- const source=historic?'NYC historical '+year:id==='aerial'?'Esri World Imagery':id==='buildings'?'OpenStreetMap + NYC building polygons':'OpenStreetMap';
- baseStatus('Loading '+source+'…');
- let loaded=0,errors=0,settled=false;
- const report=()=>{if(loaded>0&&!settled&&token===state.baseLoadToken){settled=true;baseStatus(source+' loaded.','good')}};
- base.on('tileload',()=>{loaded++;report()});
- base.on('tileerror',()=>{
+ state.transitLayers.routes=L.geoJSON(null,{
+  style:f=>({color:subwayColor(f),weight:map.getZoom()>=14?4.5:3.3,opacity:.9,lineCap:'round'}),
+  onEachFeature:(f,l)=>{
+   const p=f.properties||{},line=p.short_name||p.route_short_name||p.route_id||'Subway route';
+   l.bindTooltip('NYC subway route '+sr(line),{sticky:true});
+  }
+ });
+ state.transitLayers.stations=L.geoJSON(null,{
+  pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:map.getZoom()>=15?6:4.5,color:'#25354d',weight:1.6,fillColor:'#ffffff',fillOpacity:1}),
+  onEachFeature:(f,l)=>{
+   const p=f.properties||{},name=p.stop_name||p.station_name||p.name||'Subway station';
+   l.bindPopup('<strong>'+sr(name)+'</strong><br>NYC subway station');
+   l.bindTooltip(sr(name),{sticky:true});
+  }
+ });
+}
+function syncTransitVisibility(){
+ if(!state.map)return;
+ ensureTransitLayers();
+ const enabled=state.overlays.transit;
+ for(const kind of ['routes','stations']){
+  const layer=state.transitLayers[kind];
+  if(enabled&&state.subway[kind]){
+   if(!state.map.hasLayer(layer))layer.addTo(state.map);
+  }else{
+   state.transitAborts[kind]?.abort();
+   if(state.map.hasLayer(layer))state.map.removeLayer(layer);
+  }
+ }
+ if(enabled)loadTransit();else transitStatus('Transit overlays off');
+}
+function bringTransitForward(){
+ for(const kind of ['routes','stations']){
+  const layer=state.transitLayers[kind];
+  if(layer&&state.map.hasLayer(layer))layer.bringToFront();
+ }
+ if(state.buildingLayer&&state.map.hasLayer(state.buildingLayer))state.buildingLayer.bringToFront();
+ // Keep parcel inspection highlights on top of lines and footprints.
+ window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS?.();
+}
+async function loadTransit(){
+ if(!state.overlays.transit)return;
+ ensureTransitLayers();
+ const zoom=state.map.getZoom();
+ if(zoom<11){for(const kind of ['routes','stations'])state.transitLayers[kind].clearLayers();transitStatus('Zoom in for NYC subway routes and stations');return}
+ const bounds=state.map.getBounds();
+ const geometry=JSON.stringify({xmin:bounds.getWest(),ymin:bounds.getSouth(),xmax:bounds.getEast(),ymax:bounds.getNorth(),spatialReference:{wkid:4326}});
+ const token=++state.transitLoadToken;
+ const results={};
+ await Promise.all(['routes','stations'].map(async kind=>{
+  if(!state.subway[kind])return;
+  const controller=new AbortController();state.transitAborts[kind]?.abort();state.transitAborts[kind]=controller;
+  const layer=state.transitLayers[kind];
+  if(kind==='stations'&&zoom<12){layer.clearLayers();return}
+  const params={f:'geojson',where:'1=1',outFields:'*',geometry,geometryType:'esriGeometryEnvelope',inSR:4326,outSR:4326,spatialRel:'esriSpatialRelIntersects',resultOffset:0,resultRecordCount:1500};
+  try{
+   const features=[];
+   for(let part=0;part<3;part++){
+    params.resultOffset=part*1500;
+    const data=await fetchJSON(SUBWAY_API[kind],params,controller.signal);
+    const batch=data.features||[];features.push(...batch);
+    if(batch.length<1500&&!data.exceededTransferLimit)break;
+   }
+   if(controller.signal.aborted||token!==state.transitLoadToken||!state.overlays.transit||!state.subway[kind])return;
+   layer.clearLayers();layer.addData({type:'FeatureCollection',features});
+   results[kind]=features.length;
+  }catch(e){
+   if(controller.signal.aborted||e.name==='AbortError')return;
+   results[kind]='error';transitStatus('Subway '+kind+' service failed: '+e.message,'error');
+  }
+ }));
+ if(token!==state.transitLoadToken||!state.overlays.transit)return;
+ bringTransitForward();
+ const loaded=Object.entries(results).filter(([k,v])=>typeof v==='number');
+ if(loaded.length)transitStatus(loaded.map(([k,v])=>v+' '+k).join(' · ')+' shown','good');
+}
+function updateOverlayStatus(){
+ const active=['transit','buildings','aerial'].filter(id=>state.overlays[id]);
+ baseStatus('Street basemap · '+(active.length?active.join(' + ')+' enabled':'no optional overlays'));
+}
+function toggleOverlay(id,enabled){
+ if(!state.map||!['transit','buildings','aerial'].includes(id))return;
+ state.overlays[id]=Boolean(enabled);
+ if(id==='transit')syncTransitVisibility();
+ if(id==='buildings'){
+  if(enabled)loadBuildingFootprints();else dropBuildingLayer();
+ }
+ if(id==='aerial'){if(enabled)loadAerial();else removeAerial()}
+ state.map.getContainer().dataset.basemap=state.overlays.aerial?'aerial':'transit';
+ updateOverlayStatus();
+}
+function removeAerial(){
+ ++state.baseLoadToken;
+ if(state.aerialLayer){state.map.removeLayer(state.aerialLayer);state.aerialLayer=null}
+}
+function loadAerial(){
+ if(!state.overlays.aerial||!state.map)return;
+ removeAerial();
+ const map=state.map,year=state.aerialYear||'current',historic=year!=='current';
+ const url=historic?'https://maps.nyc.gov/xyz/1.0.0/photo/'+encodeURIComponent(year)+'/{z}/{x}/{y}.png8':baseOptions.aerial.url;
+ const token=++state.baseLoadToken;
+ const overlay=L.tileLayer(url,{attribution:historic?'&copy; City of New York '+year+' imagery':baseOptions.aerial.attribution,maxNativeZoom:19,maxZoom:20,opacity:.82,updateWhenIdle:true});
+ state.aerialLayer=overlay;
+ overlay.addTo(map);
+ // Leaflet separates tiles and vectors: aerial tiles stay below zoning and transit overlays.
+ let loaded=0,errors=0,done=false;
+ overlay.on('tileload',()=>{loaded++;if(!done&&token===state.baseLoadToken){done=true;baseStatus('Aerial imagery '+(historic?year:'current')+' loaded','good')}});
+ overlay.on('tileerror',()=>{
   if(token!==state.baseLoadToken)return;
   errors++;
-  if(errors>=2||errors>loaded+1){
-   state.baseLoadToken++;
+  if(errors>=2&&errors>loaded){
+   removeAerial();
    if(historic){
     state.aerialYear='current';
-    const current=el('basemap-status');
-    document.querySelector('input[name="aerial-year"][value="current"]').checked=true;
-    setBasemap('aerial');
-    baseStatus('Historical '+year+' imagery could not load. Showing current Esri imagery instead.','error');
-   }else if(id==='aerial'){
-    const transit=document.querySelector('input[name="basemap"][value="transit"]');
-    if(transit)transit.checked=true;
-    setBasemap('transit');
-    baseStatus('Imagery tiles failed. Reverted to reliable OpenStreetMap.','error');
+    const input=document.querySelector('input[name="aerial-year"][value="current"]');if(input)input.checked=true;
+    loadAerial();
+    baseStatus('Historical imagery unavailable. Showing current imagery.','error');
    }else{
-    baseStatus(source+' tiles failed to load. Check your network connection.','error');
+    state.overlays.aerial=false;
+    const checkbox=el('toggle-aerial');if(checkbox)checkbox.checked=false;
+    baseStatus('Imagery unavailable. Street map remains visible.','error');
    }
   }
  });
- map.getContainer().dataset.basemap=id;
- const key=document.querySelector('.map-key');if(key)key.style.background=id==='aerial'?'#ffffffec':'';
- state.tiles=base;
- if(id==='buildings')loadBuildingFootprints();
 }
 function checked(id){const input=el('sub-'+id);return input?(!input.disabled&&input.checked):true}
 function visibleCore(key,feature){
@@ -505,7 +601,7 @@ function makeLayer(item){
  });
 }
 function source(item){return ROOT+item.source+'/FeatureServer/'+(item.layer||0)}
-function onVisibleViewport(){clearTimeout(state.loaded);state.loaded=setTimeout(()=>{for(const entry of state.active.values())if(entry.item)load(entry.item);if(state.mode==='buildings')loadBuildingFootprints()},420)}
+function onVisibleViewport(){clearTimeout(state.loaded);state.loaded=setTimeout(()=>{for(const entry of state.active.values())if(entry.item)load(entry.item);if(state.overlays.buildings)loadBuildingFootprints();if(state.overlays.transit)loadTransit()},420)}
 async function fetchJSON(url,params={},signal){
  const u=new URL(url);for(const [k,v] of Object.entries(params))u.searchParams.set(k,String(v));
  const response=await fetch(u,{signal});if(!response.ok)throw Error('HTTP '+response.status);
@@ -550,7 +646,8 @@ function deactivate(item){
 }
 function setup(map){
  state.map=map;build();map.on('moveend',onVisibleViewport);
- map.getContainer().dataset.basemap='minimal';
+ ensureTransitLayers();syncTransitVisibility();
+ map.getContainer().dataset.basemap='transit';
  document.body.classList.add('layer-catalog-active');
 }
 window.setupLayerExplorer=setup;
