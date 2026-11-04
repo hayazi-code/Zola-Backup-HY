@@ -102,6 +102,7 @@ function createLayers(){
  drawHighlight=L.featureGroup().addTo(map);
 }
 function bringHighlights(){layerGroups.lots.bringToFront();visibleLayers.selected.bringToFront();inspectLayer.bringToFront();drawHighlight.bringToFront()}
+window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS=()=>bringHighlights();
 function checkLayer(key){return key==='lots'?(flags.lots||flags.landuse):flags[key]}
 async function refreshLayer(key){
  const group=layerGroups[key],prior=requests[key];if(prior)prior.abort();
@@ -124,6 +125,7 @@ async function refreshLayer(key){
   group.clearLayers();group.addData({type:'FeatureCollection',features:visible});
   if(key==='lots')group.setStyle(layerStyles.lots);
   bringHighlights();
+  window.ZOLA_BRING_TRANSIT_FORWARD?.();
   const clipped=features.length>=6000;
   signalLight(key,clipped?'Zoom in for complete coverage':FORMAT.format(visible.length)+' shown',clipped?'warn':'good');
  }catch(e){
