@@ -58,12 +58,9 @@ function signalLight(key,text,kind=''){
  const n=DOM('state-'+key);if(!n)return;n.textContent=text;n.dataset.kind=kind;
 }
 async function request(url,params={},signal){
- const u=new URL(url);for(const [key,value] of Object.entries(params))if(value!==undefined&&value!==null)u.searchParams.set(key,String(value));
- const response=await fetch(u.toString(),{signal,headers:{Accept:'application/json'}});
- if(!response.ok)throw new Error('HTTP '+response.status);
- const json=await response.json();if(json.error)throw new Error(json.error.message||'GIS service error');
- return json;
+ return window.ZOLA_GIS.request(url,params,signal,{cache:true});
 }
+
 function extent(){const b=map.getBounds();return JSON.stringify({xmin:b.getWest(),ymin:b.getSouth(),xmax:b.getEast(),ymax:b.getNorth(),spatialReference:{wkid:4326}})}
 function gisParams(geometry,geometryType){
  return {f:'geojson',where:'1=1',geometry,geometryType,inSR:4326,outSR:4326,spatialRel:'esriSpatialRelIntersects',returnGeometry:true};
