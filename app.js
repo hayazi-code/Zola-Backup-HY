@@ -58,8 +58,8 @@ function notice(message,kind='info'){
 function signalLight(key,text,kind=''){
  const n=DOM('state-'+key);if(!n)return;n.textContent=text;n.dataset.kind=kind;
 }
-async function request(url,params={},signal){
- return window.ZOLA_GIS.request(url,params,signal,{cache:true});
+async function request(url,params={},signal,options={}){
+ return window.ZOLA_GIS.request(url,params,signal,{cache:true,...options});
 }
 
 function extent(){const b=map.getBounds();return JSON.stringify({xmin:b.getWest(),ymin:b.getSouth(),xmax:b.getEast(),ymax:b.getNorth(),spatialReference:{wkid:4326}})}
@@ -112,7 +112,8 @@ async function refreshLayer(key){
  const features=[];
  try{
   // Map rendering has a bounded result budget; a tighter map extent loads more.
-  for(let i=0;i<3;i++){
+  const pages=window.matchMedia('(max-width: 740px)').matches?1:3;
+  for(let i=0;i<pages;i++){
    query.resultOffset=i*2000;
    const data=await request(apiLayer(key),query,ac.signal);
    const batch=data.features||[];features.push(...batch);
@@ -124,7 +125,7 @@ async function refreshLayer(key){
   if(key==='lots')group.setStyle(layerStyles.lots);
   bringHighlights();
   window.ZOLA_BRING_TRANSIT_FORWARD?.();
-  const clipped=features.length>=6000;
+  const clipped=features.length>=pages*2000;
   signalLight(key,clipped?'Zoom in for complete coverage':FORMAT.format(visible.length)+' shown',clipped?'warn':'good');
  }catch(e){
   if(e.name==='AbortError')return;
@@ -225,7 +226,7 @@ async function inspectAt(latlng){
  notice('Looking up tax lot…');
  try{
   const geom=JSON.stringify({x:latlng.lng,y:latlng.lat,spatialReference:{wkid:4326}});
-  const data=await request(apiLayer('lots'),{f:'geojson',where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',spatialRel:'esriSpatialRelIntersects',resultRecordCount:10},controller.signal);
+  const data=await request(apiLayer('lots'),{f:'geojson',where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',spatialRel:'esriSpatialRelIntersects',resultRecordCount:10},controller.signal,{priority:2});
   if(controller.signal.aborted||seq!==parcelLookupSeq)return;
   if(!data.features?.length)return notice('No mapped tax lot at this location.','warn');
   inspect(data.features[0],{add:mode==='select'});notice('Parcel information loaded.','good');
@@ -239,7 +240,7 @@ async function lookupBBL(value){
  const controller=new AbortController();parcelLookupController=controller;
  notice('Searching for BBL '+b+'…');
  try{
-  const data=await request(apiLayer('lots'),{f:'geojson',where:'BBL = '+Number(b),outFields:'*',returnGeometry:true,outSR:4326,resultRecordCount:10},controller.signal);
+  const data=await request(apiLayer('lots'),{f:'geojson',where:'BBL = '+Number(b),outFields:'*',returnGeometry:true,outSR:4326,resultRecordCount:10},controller.signal,{priority:2});
   if(controller.signal.aborted||seq!==parcelLookupSeq)return;
   if(!data.features?.length)return notice('No MapPLUTO parcel found for this BBL.','warn');
   inspect(data.features[0]);focusFeatures(data.features);notice('Found BBL '+b,'good');
