@@ -20,6 +20,8 @@ const tests=[
  {name:'NYC subway stations (GeoJSON)',url:'https://services.arcgis.com/5e8P2PHwGNSRUvq3/ArcGIS/rest/services/New_York_City_Region_Transit_Layers/FeatureServer/0/query?'+p({f:'geojson',where:'1=1',outFields:'stop_name',resultRecordCount:2,outSR:4326}),check:j=>j.type==='FeatureCollection'&&j.features?.length>0},
  {name:'NYC Planning subway lines fallback (GeoJSON)',url:ROOT+'SubwayLines_share/FeatureServer/0/query?'+p({f:'geojson',where:'1=1',outFields:'*',resultRecordCount:2,outSR:4326}),check:j=>j.type==='FeatureCollection'&&j.features?.length>0},
  {name:'NYC Planning subway stations fallback (GeoJSON)',url:ROOT+'SubwayStations_share/FeatureServer/0/query?'+p({f:'geojson',where:'1=1',outFields:'*',resultRecordCount:2,outSR:4326}),check:j=>j.type==='FeatureCollection'&&j.features?.length>0},
+ {name:'LIRR route geometry',url:'https://services.arcgis.com/5e8P2PHwGNSRUvq3/ArcGIS/rest/services/New_York_City_Region_Transit_Layers/FeatureServer/7/query?'+p({f:'geojson',where:'1=1',outFields:'short_name,color',resultRecordCount:2,outSR:4326}),check:j=>j.type==='FeatureCollection'&&j.features?.length>0},
+ {name:'LIRR station locations',url:'https://services.arcgis.com/5e8P2PHwGNSRUvq3/ArcGIS/rest/services/New_York_City_Region_Transit_Layers/FeatureServer/1/query?'+p({f:'geojson',where:'1=1',outFields:'stop_name',resultRecordCount:2,outSR:4326}),check:j=>j.type==='FeatureCollection'&&j.features?.length>0},
  {name:'NYC GeoSearch / address search',url:'https://geosearch.planninglabs.nyc/v2/search?'+p({text:'120 Broadway, Manhattan',size:1}),check:j=>j.features?.length>0},
  {name:'Application JavaScript',url:'./app.js?v=18',check:(_,t)=>t.includes('const SERVICE_ROOT')}
 ];
