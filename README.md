@@ -189,3 +189,7 @@ The application itself does not transmit, persist, or put the coordinates into i
 ## Build 31: collapsible map legend
 
 The map legend now has a visible **Legend** button that toggles its content open and closed without affecting zoning or land-use layers. The toggle is keyboard accessible and exposes its state through `aria-expanded`. On mobile, the legend starts collapsed to avoid crowding the map and location controls; on desktop it starts expanded. The compact legend button remains available to reopen it, and subsequent land-use and zoning legend redraws preserve its collapsed/expanded state. This is a display-only control, with no new GIS requests.
+
+## Build 32: mobile map control layout
+
+The collapsible map legend is now anchored below the top map toolbar rather than beside the bottom geolocation controls. Expanded legend content scrolls inside a height-limited panel on narrow screens. The Locate me button is now a compact, 44 px square icon-only control, preserving its accessible text, permission flow, current-location display, Stop locating state, and separate recenter button. The map's zoning, parcel, and layer logic is unchanged.
