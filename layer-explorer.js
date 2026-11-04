@@ -385,7 +385,7 @@ function transitStatus(message,kind=''){
 function subwayColor(feature){
  const p=feature.properties||{};
  const raw=String(p.short_name||p.route_short_name||p.route||p.route_id||'').toUpperCase().trim();
- const first=raw.match(/^[1-7AC E BDFMGJZLNQRWST]/)?.[0]?.trim()||raw.match(/^[A-Z0-9]+/)?.[0]||'';
+ const first=raw.match(/^[1-7A-Z]/)?.[0]||'';
  const color=String(p.color||'').trim().replace(/^#/,'');
  const sourceColor=/^[0-9A-Fa-f]{6}$/.test(color)?'#'+color.toUpperCase():null;
  return SUBWAY_COLORS[first]||sourceColor||'#547b9d';
@@ -406,7 +406,7 @@ function ensureTransitLayers(){
    const p=f.properties||{},name=String(p.stop_name||p.station_name||p.name||'Subway station').trim();
    l.bindPopup('<strong>'+sr(name)+'</strong><br>NYC subway station');
    // Permanent station names at neighborhood zooms, not hover-only tooltips.
-   l.bindTooltip(sr(name),{permanent:map.getZoom()>=14,sticky:false,direction:'right',offset:[7,0],opacity:.94,className:'subway-station-label'});
+   l.bindTooltip(sr(name),{permanent:map.getZoom()>=13,sticky:false,direction:'right',offset:[7,0],opacity:.94,className:'subway-station-label'});
   }
  });
 }
