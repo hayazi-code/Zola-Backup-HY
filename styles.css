@@ -730,7 +730,7 @@
 /* BUILD 32: keep legend above the map and away from the lower GPS tools. */
 #map-key.map-key,
 #map-key.map-key.is-collapsed{
- top:68px!important;
+ top:108px!important;
  bottom:auto!important;
  left:12px!important;
  right:auto!important;
@@ -762,10 +762,12 @@
 @media(max-width:740px){
  #map-key.map-key,
  #map-key.map-key.is-collapsed{
-  top:68px!important;bottom:auto!important;left:9px!important;
+  top:108px!important;bottom:auto!important;left:9px!important;
   max-width:min(315px,calc(100vw - 18px))!important;
  }
  #map-key.map-key.is-collapsed{max-width:120px!important}
  #map-key #map-key-content{max-height:min(48dvh,350px);overflow-y:auto}
  .geolocation-tools{right:10px;bottom:117px}
 }
+
+/* Build 33: legend clears Leaflet's plus/minus zoom control with generous tap spacing. */
