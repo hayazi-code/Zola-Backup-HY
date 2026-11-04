@@ -703,3 +703,26 @@
  body.mobile-sheet-expanded .geolocation-tools{bottom:12px}
  body.mobile-sheet-expanded .geolocation-tools #recenter-me{display:none}
 }
+
+/* BUILD 31: collapsible, touch-accessible map legend. */
+#map-key.map-key{padding:0;overflow:hidden;max-width:min(340px,calc(100vw - 20px));pointer-events:auto}
+#map-key .map-key-toggle{
+ display:flex;justify-content:space-between;align-items:center;gap:14px;
+ width:100%;min-height:38px;padding:9px 12px;
+ background:#fff;border:0;border-radius:5px;
+ color:#563287;font:750 12px/1.3 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+ text-align:left;cursor:pointer;pointer-events:auto
+}
+#map-key .map-key-toggle:hover{background:#f8f5fb}
+#map-key .map-key-toggle:focus-visible{outline:2px solid #563287;outline-offset:-3px}
+#map-key .map-key-chevron{font-size:16px;line-height:1;color:#6b527f}
+#map-key #map-key-content{padding:1px 12px 11px}
+#map-key #map-key-content[hidden]{display:none!important}
+#map-key.map-key.is-collapsed{width:max-content;min-width:86px;max-width:140px!important}
+#map-key.map-key.is-collapsed .map-key-toggle{min-height:38px}
+@media(max-width:740px){
+ #map-key.map-key{pointer-events:auto}
+ #map-key .map-key-toggle{min-height:44px;padding:10px 12px;font-size:12px}
+ #map-key.map-key.is-collapsed{bottom:116px;max-width:120px!important}
+ #map-key.map-key:not(.is-collapsed){max-width:min(315px,calc(100vw - 18px))!important}
+}
