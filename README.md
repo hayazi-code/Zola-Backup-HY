@@ -3,7 +3,8 @@
 **Independent public-data NYC zoning and land-use viewer**
 
 - Live website: https://hayazi-code.github.io/Zola-Backup-HY/
-- Browser diagnostics: https://hayazi-code.github.io/Zola-Backup-HY/diagnostics.html
+- Core browser diagnostics: https://hayazi-code.github.io/Zola-Backup-HY/diagnostics.html
+- All GIS layer service diagnostics: https://hayazi-code.github.io/Zola-Backup-HY/layer-diagnostics.html
 - Source code: https://github.com/hayazi-code/Zola-Backup-HY
 
 ## Features
@@ -53,7 +54,8 @@ Zero-build static site designed for GitHub Pages:
 - `styles.css`: Responsive ZoLa-inspired styling.
 - `app.js`: GIS queries, parcel lookup, core interactive layers, drawing, exports, and scenario calculation.
 - `layer-explorer.js`: Grouped layer catalog with on-demand public ArcGIS viewport queries, per-layer state, metadata links, and basemap selection.
-- `diagnostics.html`: Browser-based integration tests against live APIs.
+- `diagnostics.html`: Browser-based core integration tests against live APIs.
+- `layer-diagnostics.html`: On-demand browser metadata and query tests for every configured ArcGIS service.
 
 Map rendering uses Leaflet 1.9.4; geometry drawing uses Leaflet.draw 1.0.4. ArcGIS FeatureServer requests are executed directly from the browser. Spatial polygons are retrieved in GeoJSON (EPSG:4326). BBL queries treat `BBL` as a numeric field because MapPLUTO stores it as a double.
 
