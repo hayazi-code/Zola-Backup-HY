@@ -163,6 +163,7 @@ function onFlagsChange(){
   const ch=DOM('layer-'+key);if(ch)flags[key]=ch.checked;
  }
  layerGroups.lots.setStyle(layerStyles.lots);
+ window.ZOLA_SYNC_CHILDREN?.();
  updateMapLegend();
  refreshMap();
 }
