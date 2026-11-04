@@ -363,6 +363,10 @@ async function loadBuildingFootprints(){
 }
 const SUBWAY_ROOT='https://services.arcgis.com/5e8P2PHwGNSRUvq3/ArcGIS/rest/services/New_York_City_Region_Transit_Layers/FeatureServer/';
 const SUBWAY_API={routes:SUBWAY_ROOT+'6/query',stations:SUBWAY_ROOT+'0/query'};
+const SUBWAY_FALLBACK={
+ routes:'https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/SubwayLines_share/FeatureServer/0/query',
+ stations:'https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/SubwayStations_share/FeatureServer/0/query'
+};
 const SUBWAY_COLORS={'1':'#EE352E','2':'#EE352E','3':'#EE352E','4':'#00933C','5':'#00933C','6':'#00933C','7':'#B933AD','A':'#0039A6','C':'#0039A6','E':'#0039A6','B':'#FF6319','D':'#FF6319','F':'#FF6319','M':'#FF6319','G':'#6CBE45','J':'#996633','Z':'#996633','L':'#A7A9AC','N':'#FCCC0A','Q':'#FCCC0A','R':'#FCCC0A','W':'#FCCC0A','S':'#808183'};
 function transitStatus(message,kind=''){
  const out=el('transit-layer-status');if(out){out.textContent=message;out.dataset.kind=kind}
@@ -434,25 +438,42 @@ async function loadTransit(){
   if(kind==='stations'&&zoom<12){layer.clearLayers();return}
   const params={f:'geojson',where:'1=1',outFields:'*',geometry,geometryType:'esriGeometryEnvelope',inSR:4326,outSR:4326,spatialRel:'esriSpatialRelIntersects',resultOffset:0,resultRecordCount:1500};
   try{
-   const features=[];
-   for(let part=0;part<3;part++){
-    params.resultOffset=part*1500;
-    const data=await fetchJSON(SUBWAY_API[kind],params,controller.signal);
-    const batch=data.features||[];features.push(...batch);
-    if(batch.length<1500&&!data.exceededTransferLimit)break;
+   let features=[],source='Regional subway service',primaryError=null;
+   async function queryService(endpoint){
+    const found=[];
+    for(let part=0;part<3;part++){
+     params.resultOffset=part*1500;
+     const data=await fetchJSON(endpoint,params,controller.signal);
+     const batch=data.features||[];
+     found.push(...batch);
+     if(batch.length<1500&&!data.exceededTransferLimit)break;
+    }
+    return found;
    }
+   try{features=await queryService(SUBWAY_API[kind])}
+   catch(error){primaryError=error}
+   if((primaryError||!features.length)&&!controller.signal.aborted){
+    try{const fallback=await queryService(SUBWAY_FALLBACK[kind]);if(fallback.length){features=fallback;source='NYC Planning GIS fallback';primaryError=null}}
+    catch(error){if(primaryError)throw Error('Regional service: '+primaryError.message+'; NYC Planning fallback: '+error.message);if(!features.length)throw error}
+   }
+   if(primaryError&&!features.length)throw primaryError;
    if(controller.signal.aborted||token!==state.transitLoadToken||!state.overlays.transit||!state.subway[kind])return;
    layer.clearLayers();layer.addData({type:'FeatureCollection',features});
-   results[kind]=features.length;
+   results[kind]={count:features.length,source};
   }catch(e){
    if(controller.signal.aborted||e.name==='AbortError')return;
-   results[kind]='error';transitStatus('Subway '+kind+' service failed: '+e.message,'error');
+   results[kind]={error:e.message};
   }
  }));
  if(token!==state.transitLoadToken||!state.overlays.transit)return;
  bringTransitForward();
- const loaded=Object.entries(results).filter(([k,v])=>typeof v==='number');
- if(loaded.length)transitStatus(loaded.map(([k,v])=>v+' '+k).join(' · ')+' shown','good');
+ const loaded=Object.entries(results).filter(([k,v])=>v&&typeof v.count==='number');
+ const failed=Object.entries(results).filter(([k,v])=>v&&v.error);
+ if(failed.length){transitStatus(failed.map(([k,v])=>k+': '+v.error).join(' · '),'error')}
+ else if(loaded.length){
+  const message=loaded.map(([k,v])=>v.count+' '+k+(v.source==='NYC Planning GIS fallback'?' (DCP fallback)':'')).join(' · ');
+  transitStatus(message+(loaded.every(([k,v])=>v.count===0)?' · No features in the visible map area':' shown'),loaded.every(([k,v])=>v.count===0)?'':'good');
+ }
 }
 function updateOverlayStatus(){
  const active=['transit','buildings','aerial'].filter(id=>state.overlays[id]);
