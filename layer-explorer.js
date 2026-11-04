@@ -7,7 +7,7 @@ const N=(id,name,opts={})=>({id,name,...opts});
 const Z=(id,name,opts={})=>N(id,name,{minZoom:13,...opts});
 const S=(id,name,opts={})=>N(id,name,{minZoom:12,...opts});
 const A=(id,name,opts={})=>N(id,name,{minZoom:11,...opts});
-const range=(prefix,labels)=>labels.map(s=>N(prefix+'-'+s,s,{checked:true,kind:'filter'}));
+const range=(prefix,labels)=>labels.map(s=>N(prefix+'-'+s,s,{checked:true,kind:'filter',swatch:s.startsWith('C')?'#e88d94':s.startsWith('M')?'#b6a0cf':s.startsWith('R')?'#ecd081':'#e16a90'}));
 const zones=(kind,from,to)=>range('zone',Array.from({length:to-from+1},(_,i)=>kind+(from+i)));
 const overlays=(kind)=>range('overlay',Array.from({length:5},(_,i)=>kind+'-'+(i+1)));
 const GROUPS=[
