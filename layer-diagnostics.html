@@ -1,0 +1,56 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZoLa Backup HY | Complete layer diagnostics</title>
+<style>html{background:#f6f4f8;color:#302b35;font:13px system-ui,sans-serif}body{margin:0}header{background:#502c76;color:white;padding:18px 24px}header h1{font-size:20px;margin:0}main{max-width:1050px;margin:25px auto;padding:0 15px}.tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:15px 0}button{border:0;border-radius:4px;background:#563087;color:#fff;padding:11px 18px;cursor:pointer}button:disabled{opacity:.5}a{color:#563087}table{width:100%;border-collapse:collapse;background:#fff;box-shadow:0 1px 6px #0001}thead{background:#ede6f4}th,td{text-align:left;padding:11px;border-bottom:1px solid #eee;vertical-align:top;font-size:12px}td small{display:block;color:#807887;margin-top:5px}.pass{color:#1c7a53;font-weight:700}.fail{color:#ad3939;font-weight:700}.pending{color:#8c691f}code{font-size:11px;color:#6c5b73;overflow-wrap:anywhere}.instructions{line-height:1.5;color:#746e78}#progress{font-size:12px}td a{font-weight:600}@media(max-width:650px){table{display:block;overflow-x:auto;white-space:normal}th,td{min-width:90px}td:first-child{min-width:170px}}</style></head><body>
+<header><h1>ZoLa Backup HY · Full GIS layer diagnostics</h1></header><main><p class="instructions">Test the external NYC public services that power the layer catalog. A successful test confirms that metadata and a browser GIS query respond, but not the currency or legal accuracy of the features. This performs up to two lightweight requests per service, only when you click Run.</p>
+<div class="tools"><button id="run">Run checks for all connected layers</button><a href="./">Return to map</a><a href="diagnostics.html">Core application diagnostics</a><span id="progress">Ready</span></div>
+<table><thead><tr><th>ArcGIS service</th><th>Used for</th><th>Metadata</th><th>GeoJSON query</th><th>Details</th></tr></thead><tbody id="rows"></tbody></table>
+<p class="instructions">Each test uses a zero-result query to validate permissions and query support without downloading large geometry datasets. You should still test actual features on the map. Unlinked catalog entries are intentionally excluded.</p>
+<script src="layer-explorer.js?v=5"></script>
+<script>
+'use strict';
+const BASE='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/ArcGIS/rest/services/';
+const all=window.ZOLA_LAYER_CATALOG||[];
+const groups=new Map();
+for(const layer of all){if(!layer.source||layer.available===false)continue;if(!groups.has(layer.source))groups.set(layer.source,[]);groups.get(layer.source).push(layer.name)}
+const rows=new Map();const body=document.getElementById('rows');const runBtn=document.getElementById('run');
+for(const [name,layers] of groups){
+ const row=document.createElement('tr'),col=document.createElement('td'),a=document.createElement('a');
+ a.textContent=name;a.target='_blank';a.rel='noopener';a.href=BASE+encodeURIComponent(name)+'/FeatureServer/0';col.append(a);
+ const uses=document.createElement('td');uses.textContent=layers.join(', ');
+ const meta=document.createElement('td');meta.textContent='Not tested';
+ const query=document.createElement('td');query.textContent='Not tested';
+ const details=document.createElement('td');details.textContent='';
+ row.append(col,uses,meta,query,details);body.append(row);rows.set(name,{meta,query,details});
+}
+document.getElementById('progress').textContent=groups.size+' source services available for testing';
+async function request(url,signal){const r=await fetch(url,{signal});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();if(j.error)throw Error(j.error.message||'ArcGIS error');return j}
+function color(el,ok){el.textContent=ok?'PASS':'FAIL';el.className=ok?'pass':'fail'}
+async function check(name){
+ const row=rows.get(name),url=BASE+encodeURIComponent(name)+'/FeatureServer/0';
+ let passedMeta=false,passedQuery=false;
+ const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),18000);
+ try{
+  row.meta.textContent='Checking…';row.meta.className='pending';
+  const m=await request(url+'?f=json',ac.signal);
+  passedMeta=typeof m.geometryType==='string'&&Array.isArray(m.fields)&&m.fields.length>0;
+  color(row.meta,passedMeta);
+  if(!passedMeta)throw Error('Missing geometryType or fields metadata');
+  row.details.textContent=m.geometryType+' · '+m.fields.length+' fields';
+  row.query.textContent='Checking…';row.query.className='pending';
+  const p=new URLSearchParams({f:'geojson',where:'1=0',outFields:'*',resultRecordCount:'1',returnGeometry:'true',outSR:'4326'});
+  const j=await request(url+'/query?'+p.toString(),ac.signal);
+  passedQuery=j.type==='FeatureCollection'&&Array.isArray(j.features);
+  color(row.query,passedQuery);
+  if(!passedQuery)row.details.textContent='Unexpected GeoJSON query response';
+ }catch(e){if(!passedMeta)color(row.meta,false);if(!passedQuery)color(row.query,false);row.details.textContent=(e.name==='AbortError'?'Timeout after 18 seconds':e.message)}
+ finally{clearTimeout(timer)}
+ return passedMeta&&passedQuery;
+}
+runBtn.onclick=async()=>{
+ runBtn.disabled=true;const names=[...groups.keys()],concurrency=4;let next=0,done=0,passed=0;
+ for(const row of rows.values()){row.meta.textContent='Queued';row.query.textContent='Queued';row.meta.className='pending';row.query.className='pending';row.details.textContent=''}
+ const worker=async()=>{while(next<names.length){const i=next++;const ok=await check(names[i]);done++;if(ok)passed++;document.getElementById('progress').textContent=done+' / '+names.length+' tested · '+passed+' fully responsive'}};
+ await Promise.all(Array.from({length:concurrency},worker));
+ document.getElementById('progress').textContent=passed+' / '+names.length+' services passed both checks';
+ runBtn.disabled=false;
+};
+</script></main></body></html>
