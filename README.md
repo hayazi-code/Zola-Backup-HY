@@ -11,7 +11,9 @@
 - Minimal neutral OpenStreetMap basemap with a ZoLa-inspired planning interface.
 - Search for NYC properties by **10-digit BBL**, or search by address/name using NYC Planning GeoSearch.
 - Click any mapped tax lot to inspect MapPLUTO address, zoning districts, overlays, lot area, land use, building information, reported FAR attributes, and source version.
-- Enable/disable NYC Planning public feature layers: zoning districts, tax lot boundaries, MapPLUTO land use, commercial overlays, special districts, subdistricts, and MIH.
+- A searchable **ZoLa-style grouped layer catalog** with dozens of public service choices: zoning districts, tax lots and land use coloring, filtered C/M districts and C1/C2 overlays, zoning map index, adopted/certified map amendments, special districts, MIH, IH, limited height, lower-density growth management, transit zones, designated industrial areas, environmental designations, flood hazards, historic resource screening layers, public access areas, and administrative boundaries.
+- Additional layers include NYC community districts, Council districts, State Senate and Assembly districts, 2020 NTAs, census tracts, and subway lines/stations. Disabled catalog entries clearly identify missing service integrations; unavailable layers cannot be toggled.
+- Three selectable basemaps: minimal OpenStreetMap, NYC cartographic tiles, and labeled historic 2018 NYC aerial orthophotography. Click any optional data feature to inspect its available attributes and source link.
 - Select **noncontiguous** tax lots by clicking, drawing polygons, or drawing rectangles. Tax lots are identified by their full NYC BBL.
 - Summarize total mapped lot area and primary zoning districts; zoom to the selected lots; export complete selection to CSV.
 - Enter an assumed FAR for a **purely illustrative** aggregate floor-area calculation. This is not a zoning entitlement or valid bulk analysis.
@@ -49,7 +51,8 @@ Zero-build static site designed for GitHub Pages:
 
 - `index.html`: Accessible semantic interface and dependency loading.
 - `styles.css`: Responsive ZoLa-inspired styling.
-- `app.js`: GIS queries, parcel lookup, interactive layers, drawing, exports, and scenario calculation.
+- `app.js`: GIS queries, parcel lookup, core interactive layers, drawing, exports, and scenario calculation.
+- `layer-explorer.js`: Grouped layer catalog with on-demand public ArcGIS viewport queries, per-layer state, metadata links, and basemap selection.
 - `diagnostics.html`: Browser-based integration tests against live APIs.
 
 Map rendering uses Leaflet 1.9.4; geometry drawing uses Leaflet.draw 1.0.4. ArcGIS FeatureServer requests are executed directly from the browser. Spatial polygons are retrieved in GeoJSON (EPSG:4326). BBL queries treat `BBL` as a numeric field because MapPLUTO stores it as a double.
@@ -58,6 +61,7 @@ Map rendering uses Leaflet 1.9.4; geometry drawing uses Leaflet.draw 1.0.4. ArcG
 
 **The code has passed static JavaScript parsing and ID wiring checks. Live browser functionality against external APIs has not yet been comprehensively confirmed.** Run `diagnostics.html` after deployment, then test a real BBL and selection.
 
+- The layer catalog is a **partial feature match, not guaranteed full ZoLa parity**. Several specialized overlays are intentionally marked Not linked. A catalog checkbox whose source fails is shown as Unavailable, not silently claimed to succeed.
 - This is not affiliated with the NYC Department of City Planning and is not an official zoning determination.
 - It depends on third-party hosted **live** GIS and GeoSearch services. The site itself is independently deployed, but it is **not an offline data backup**. Offline resilience requires permission-appropriate, versioned locally hosted GIS datasets and an update process.
 - FeatureServer data may be delayed, and available layers need not perfectly match a given effective-date zoning map. Confirm with the official Zoning Resolution and city records.
