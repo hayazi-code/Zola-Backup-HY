@@ -91,9 +91,7 @@ const GROUPS=[
  ]}
 ];
 const ITEMS=GROUPS.flatMap(g=>g.items.map(item=>({...item,group:g.name})));
-const YEAR_OPTIONS=['2024','2022','2020','2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924'];
-const VERIFIED_YEARS=new Set(['2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924']); // Listed in the legacy NYC tile catalog; runtime may still require credentials.
-const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0,mode:'transit',overlays:{transit:true,lirr:false,buildings:false,aerial:false},subway:{routes:true,stations:true},lirr:{routes:true,stations:true},lirrLayers:{},lirrAborts:{},lirrLoadToken:0,transitLayers:{},transitAborts:{},transitLoadToken:0,aerialYear:'current',buildingLayer:null,buildingAbort:null,buildingToken:0,baseLoadToken:0,baseLayer:null,aerialLayer:null};
+const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0,mode:'transit',overlays:{transit:true,lirr:false,buildings:false,aerial:false},subway:{routes:true,stations:true},lirr:{routes:true,stations:true},lirrLayers:{},lirrAborts:{},lirrLoadToken:0,transitLayers:{},transitAborts:{},transitLoadToken:0,buildingLayer:null,buildingAbort:null,buildingToken:0,baseLoadToken:0,baseLayer:null,aerialLayer:null};
 const el=id=>document.getElementById(id),sr=(a)=>String(a??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const baseOptions={
  transit:{name:'Transit',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attribution:'&copy; OpenStreetMap contributors',maxNativeZoom:19},
@@ -281,24 +279,7 @@ function buildBasemaps(){
    const info=document.createElement('span');info.id='lirr-layer-status';info.className='basemap-note';info.textContent='Enable LIRR to load lines and stations.';
    children.append(info);body.append(children);
   }
-  if(option.id==='aerial'){
-   const years=document.createElement('div');years.className='aerial-year-grid';
-   const latest=document.createElement('label');latest.className='aerial-year';
-   const latestRadio=document.createElement('input');latestRadio.type='radio';latestRadio.name='aerial-year';latestRadio.value='current';latestRadio.checked=true;
-   latestRadio.onchange=()=>{if(latestRadio.checked){state.aerialYear='current';if(!state.overlays.aerial){el('toggle-aerial').checked=true;toggleOverlay('aerial',true)}else loadAerial() }};
-   latest.append(latestRadio,document.createTextNode('Current'));years.append(latest);
-   for(const year of YEAR_OPTIONS){
-    const label=document.createElement('label');label.className='aerial-year';
-    const radio=document.createElement('input');radio.type='radio';radio.name='aerial-year';radio.value=year;radio.disabled=!VERIFIED_YEARS.has(year);
-    radio.onchange=()=>{if(radio.checked){state.aerialYear=year;if(!state.overlays.aerial){el('toggle-aerial').checked=true;toggleOverlay('aerial',true)}else loadAerial()}};
-    label.append(radio,document.createTextNode(year));if(radio.disabled)label.title='No verified keyless imagery source for '+year;
-    years.append(label);
-   }
-   body.append(years);
-   const note=document.createElement('div');note.className='basemap-note';
-   note.textContent='Current imagery is from Esri. Historical NYC years may require credentials; failed tiles revert to current imagery.';
-   body.append(note);
-  }
+
  }
  const status=document.createElement('p');status.id='basemap-status';status.className='basemap-status';
  status.textContent='Minimal OpenStreetMap base map is always visible.';
@@ -644,30 +625,20 @@ function removeAerial(){
 function loadAerial(){
  if(!state.overlays.aerial||!state.map)return;
  removeAerial();
- const map=state.map,year=state.aerialYear||'current',historic=year!=='current';
- const url=historic?'https://maps.nyc.gov/xyz/1.0.0/photo/'+encodeURIComponent(year)+'/{z}/{x}/{y}.png8':baseOptions.aerial.url;
  const token=++state.baseLoadToken;
- const overlay=L.tileLayer(url,{attribution:historic?'&copy; City of New York '+year+' imagery':baseOptions.aerial.attribution,maxNativeZoom:19,maxZoom:20,opacity:.82,updateWhenIdle:true});
+ const overlay=L.tileLayer(baseOptions.aerial.url,{attribution:baseOptions.aerial.attribution,maxNativeZoom:19,maxZoom:20,opacity:.82,updateWhenIdle:true});
  state.aerialLayer=overlay;
- overlay.addTo(map);
- // Leaflet separates tiles and vectors: aerial tiles stay below zoning and transit overlays.
- let loaded=0,errors=0,done=false;
- overlay.on('tileload',()=>{loaded++;if(!done&&token===state.baseLoadToken){done=true;baseStatus('Aerial imagery '+(historic?year:'current')+' loaded','good')}});
+ overlay.addTo(state.map);
+ let loaded=0,errors=0,reported=false;
+ overlay.on('tileload',()=>{loaded++;if(!reported&&token===state.baseLoadToken){reported=true;baseStatus('Current aerial imagery loaded','good')}});
  overlay.on('tileerror',()=>{
   if(token!==state.baseLoadToken)return;
   errors++;
   if(errors>=2&&errors>loaded){
    removeAerial();
-   if(historic){
-    state.aerialYear='current';
-    const input=document.querySelector('input[name="aerial-year"][value="current"]');if(input)input.checked=true;
-    loadAerial();
-    baseStatus('Historical imagery unavailable. Showing current imagery.','error');
-   }else{
-    state.overlays.aerial=false;
-    const checkbox=el('toggle-aerial');if(checkbox)checkbox.checked=false;
-    baseStatus('Imagery unavailable. Street map remains visible.','error');
-   }
+   state.overlays.aerial=false;
+   const checkbox=el('toggle-aerial');if(checkbox)checkbox.checked=false;
+   baseStatus('Current aerial imagery unavailable. Street map remains visible.','error');
   }
  });
 }
