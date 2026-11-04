@@ -36,3 +36,11 @@
 #map[data-basemap=nyc] .leaflet-tile-pane,#map[data-basemap=aerial] .leaflet-tile-pane{filter:none!important;opacity:1!important}
 #map.hide-zoning-labels .zoning-label{display:none!important}
 @media(max-width:740px){.layer-group summary{padding:11px 14px}.catalog-row{padding-left:23px}.layer-explorer-tools{padding:12px 14px}}
+
+.feature-inspector{min-width:200px;font-size:12px;font-family:Inter,system-ui,sans-serif}
+.feature-inspector>strong{font-size:13px;color:#563287;display:block;padding-bottom:8px;border-bottom:1px solid #eee}
+.feature-properties{max-height:180px;overflow:auto;padding:4px 0}
+.feature-properties>div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f1eef3;padding:6px 0}
+.feature-properties span{color:#756b7a;max-width:44%;overflow-wrap:anywhere}
+.feature-properties b{font-weight:600;max-width:55%;text-align:right;overflow-wrap:anywhere}
+.feature-inspector>a{display:inline-block;margin-top:8px;font-size:11px}
