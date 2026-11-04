@@ -9,7 +9,7 @@
  <link rel="preconnect" href="https://services5.arcgis.com">
  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
- <link rel="stylesheet" href="styles.css?v=2">
+ <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
 <header>
@@ -53,17 +53,7 @@
   </nav>
   <div class="side-scroll">
    <div id="panel-explore" class="pane">
-    <section class="section">
-     <h3>Map layers</h3>
-     <label class="layer-row"><input id="layer-zoning" type="checkbox" checked><span>Zoning districts</span><em id="state-zoning">Loading…</em></label>
-     <label class="layer-row"><input id="layer-lots" type="checkbox" checked><span>Tax lot boundaries</span><em id="state-lots">Zoom in</em></label>
-     <label class="layer-row"><input id="layer-landuse" type="checkbox"><span>Land use coloring</span><em>Zoom 16+</em></label>
-     <label class="layer-row"><input id="layer-commercial" type="checkbox"><span>Commercial overlays</span><em id="state-commercial">Off</em></label>
-     <label class="layer-row"><input id="layer-special" type="checkbox"><span>Special purpose districts</span><em id="state-special">Off</em></label>
-     <label class="layer-row"><input id="layer-subdistrict" type="checkbox"><span>Special subdistricts</span><em id="state-subdistrict">Off</em></label>
-     <label class="layer-row"><input id="layer-mih" type="checkbox"><span>Mandatory Inclusionary Housing</span><em id="state-mih">Off</em></label>
-     <p class="subtle">Layers appear at appropriate zoom levels and are drawn from NYC Planning public feature services.</p>
-    </section>
+    <section class="section catalog-section"><div id="layer-tree" aria-label="Map layer catalog"></div></section>
     <section class="section">
      <h3>Property information</h3>
      <div id="property-info" class="detail-placeholder">Click a lot on the map, or search for an address or BBL, to see its MapPLUTO attributes and zoning context.</div>
@@ -121,6 +111,7 @@
 </dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-<script defer src="app.js?v=2"></script>
+<script defer src="layer-explorer.js?v=3"></script>
+<script defer src="app.js?v=3"></script>
 </body>
 </html>
