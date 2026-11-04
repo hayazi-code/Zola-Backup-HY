@@ -180,6 +180,23 @@ function renderItem(item,depth,top){
  exp.onclick=()=>{const open=children.hidden;children.hidden=!open;exp.textContent=open?'▴':'▾';exp.setAttribute('aria-expanded',String(open))};
  }
  row.append(meta);wrapper.append(row);
+ if(depth===0&&(item.core==='zoning'||item.core==='landuse')){
+  const isZoning=item.core==='zoning', initial=isZoning?59:60;
+  const control=document.createElement('div');control.className='fill-opacity-control';
+  const controlLabel=document.createElement('label');controlLabel.className='fill-opacity-label';
+  const input=document.createElement('input');input.type='range';
+  input.id='opacity-'+item.core;input.min='0';input.max='100';input.step='1';input.value=String(initial);
+  const value=document.createElement('output');value.id='opacity-'+item.core+'-value';value.htmlFor=input.id;value.textContent=initial+'%';
+  controlLabel.htmlFor=input.id;controlLabel.textContent='Fill opacity';
+  controlLabel.append(value);control.append(controlLabel,input);
+  const hint=document.createElement('small');hint.textContent=isZoning?'District borders and labels stay visible.':'DCP standard default: 60% opacity. Lot borders stay visible.';
+  control.append(hint);
+  input.addEventListener('input',()=>{
+   value.textContent=input.value+'%';
+   window.ZOLA_SET_FILL_OPACITY?.(item.core,Number(input.value));
+  });
+  wrapper.append(control);
+ }
  if(item.note){row.title=item.note;title.title=item.note}
  checkbox.onchange=()=>{
   if(item.children?.length)for(const child of descendants(item)){const check=el('sub-'+child.id);if(check&&!check.disabled)check.checked=checkbox.checked}
