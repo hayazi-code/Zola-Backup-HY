@@ -18,22 +18,19 @@
 - The amendment timeline uses its `EFFECTIVE` field where present. The current `nyzma` dataset documents changes from 2002 onward, despite the ZoLa-style slider running from 1970-01 to 2028-11.
 - The **Basemaps and transit** section now uses independent checkboxes, not mutually exclusive radio buttons. Transit overlays (NYC subway routes and stations), **Building Footprints** (actual NYC OTI building polygons), and **Aerial Imagery** can be toggled on and off separately over a persistent minimal OpenStreetMap base. Subway routes and station markers start enabled by default, with additional independent controls for each. Subway data are queried from the public `New_York_City_Region_Transit_Layers/FeatureServer` (routes layer 6, stations layer 0). 3D Buildings remains unavailable. Esri World Imagery provides current aerial imagery; older NYC imagery may fall back if public tiles fail. Years 2020, 2022, and 2024 are disabled until a usable keyless source is verified.
 - Nonworking/specialized layers are **explicitly labeled Not linked**. Some connected category filters, such as the precise parking subareas and landmark classifications, still require validation against published feature fields.
-- Select **noncontiguous** tax lots by clicking, drawing polygons, or drawing rectangles. Tax lots are identified by their full NYC BBL.
-- Summarize total mapped lot area and primary zoning districts; zoom to the selected lots; export complete selection to CSV.
-- Enter an assumed FAR for a **purely illustrative** aggregate floor-area calculation. This is not a zoning entitlement or valid bulk analysis.
+- A single **Explore** experience: inspect parcels, search NYC addresses/BBLs, and toggle zoning and transportation layers without multi-lot or scenario controls.
 - Share a parcel link with `?bbl=1000477501`.
 - Browser diagnostics that independently test each live data service.
 
-- All nested filter labels are displayed as independent wrapping rows to remain readable on narrow sidebars. **Deselect all layers** at the top of the map-layer list switches off core and optional overlays together, without clearing selected tax lots or changing the basemap.
+- All nested filter labels are displayed as independent wrapping rows to remain readable on narrow sidebars. **Deselect all layers** at the top of the map-layer list switches off core and optional overlays together, without changing the basemap.
 
 ## Mobile interface
 
-The same GitHub Pages URL adapts automatically to phones (screen width 740px or less). The map occupies the screen with a collapsible bottom sheet. A short bar at the bottom offers **Search**, **Layers**, **Lots**, and **Map** actions; tap or swipe the sheet handle to expand or collapse controls.
+The same GitHub Pages URL adapts automatically to phones (screen width 740px or less). The map occupies the screen with a collapsible bottom sheet. A short bar at the bottom offers **Search**, **Layers**, and **Map** actions; tap or swipe the sheet handle to expand or collapse controls.
 
 - **Search** opens the panel and focuses the address/BBL field. Tapping or searching a property opens MapPLUTO details in the panel.
 - **Layers** reveals the full ZoLa layer catalog; long sublayer names use individual wrapping rows.
-- **Lots** displays the selection workflow and data export. Starting polygon/rectangle drawing collapses the sheet to free the map; completing a selection opens the results.
-- **Map** collapses the panel without changing layer visibility, selected tax lots, or the current location.
+- **Map** collapses the panel without changing layer visibility or the current location.
 - Larger touch targets, independently scrolling sidebar, mobile search inputs, safe-area padding, and orientation-change map resizing are included.
 - Desktop layout remains the map with a right-hand sidebar; there is no separate mobile codebase or domain.
 
@@ -43,11 +40,11 @@ The mobile layout has been structurally checked but still requires device-level 
 
 See [AUDIT.md](AUDIT.md) for the Build 21 reliability/performance audit, fixes and limits. The browser now uses a common bounded GIS queue (5 concurrent requests), 14-second per-attempt timeout with one retry for transient errors, a 60-second capped LRU cache, and interactive parcel lookup priority. Mobile dense-viewport feature budgets are lower to reduce freezing; clipped views warn to zoom in. GitHub Actions runs offline JavaScript/queue regression tests. Actual live external GIS endpoint status must be checked from the browser diagnostic pages.
 
-In **About & data**, the app exposes GIS network requests, cache hits, retries, failures, and peak concurrency, plus a manual clear-cache button. Cache clearing does not remove chosen lots.
+In **About & data**, the app exposes GIS network requests, cache hits, retries, failures, and peak concurrency, plus a manual clear-cache button. Cache clearing does not alter the current map or layer settings.
 
 ## How to use
 
-Click a property to inspect it. Open **Selected lots**, choose **Select by click** to add or remove many lots, or use Draw polygon or Draw rectangle. Zoom to level 16 or higher to view parcel boundaries. The selection need not be contiguous.
+Click any parcel to inspect its attributes in the Property information panel. Search by address or 10-digit BBL, and zoom to level 16 or higher to show tax lot boundaries. Choose and filter GIS overlays in the layer catalog.
 
 For a zoning search, type an NYC address or 10-digit BBL and click Search. The map zooms to the matching parcel if the parcel service returns it.
 
@@ -79,26 +76,24 @@ Zero-build static site designed for GitHub Pages:
 
 - `index.html`: Accessible semantic interface and dependency loading.
 - `styles.css`: Responsive ZoLa-inspired styling.
-- `app.js`: GIS queries, parcel lookup, core interactive layers, drawing, exports, and scenario calculation.
+- `app.js`: GIS queries, parcel lookup, core interactive layers and parcel inspection.
 - `layer-explorer.js`: Grouped layer catalog with on-demand public ArcGIS viewport queries, per-layer state, metadata links, and basemap selection.
 - `mobile.js`: Phone-size bottom-sheet controls, quick navigation, mobile gestures, and responsive map resizing.
 - `diagnostics.html`: Browser-based core integration tests against live APIs.
 - `layer-diagnostics.html`: On-demand browser metadata and query tests for every configured ArcGIS service.
 
-Map rendering uses Leaflet 1.9.4; geometry drawing uses Leaflet.draw 1.0.4. ArcGIS FeatureServer requests are executed directly from the browser. Spatial polygons are retrieved in GeoJSON (EPSG:4326). BBL queries treat `BBL` as a numeric field because MapPLUTO stores it as a double.
+Map rendering uses Leaflet 1.9.4. ArcGIS FeatureServer requests are executed directly from the browser. Spatial polygons are retrieved in GeoJSON (EPSG:4326). BBL queries treat `BBL` as a numeric field because MapPLUTO stores it as a double.
 
 ## Known limitations and important caveats
 
-**The code has passed static JavaScript parsing and ID wiring checks. Live browser functionality against external APIs has not yet been comprehensively confirmed.** Run `diagnostics.html` after deployment, then test a real BBL and selection.
+**The code has passed static JavaScript parsing and ID wiring checks. Live browser functionality against external APIs has not yet been comprehensively confirmed.** Run `diagnostics.html` after deployment, then test a real BBL and parcel inspection.
 
 - The layer catalog is a **partial feature match, not guaranteed full ZoLa parity**. Several specialized overlays are intentionally marked Not linked. A catalog checkbox whose source fails is shown as Unavailable, not silently claimed to succeed.
 - This is not affiliated with the NYC Department of City Planning and is not an official zoning determination.
 - It depends on third-party hosted **live** GIS and GeoSearch services. The site itself is independently deployed, but it is **not an offline data backup**. Offline resilience requires permission-appropriate, versioned locally hosted GIS datasets and an update process.
 - FeatureServer data may be delayed, and available layers need not perfectly match a given effective-date zoning map. Confirm with the official Zoning Resolution and city records.
-- MapPLUTO tax lots are not the same thing as legally established zoning lots. Selecting adjacent or nonadjacent mapped lots does not establish zoning lot assemblage.
-- Geometry drawing has a 15,000-result safety threshold **per drawn area** for browser responsiveness. Selections can accumulate across multiple drawings.
+- MapPLUTO tax lots are not equivalent to legally established zoning lots.
 - Map rendering has a 6,000-feature safety budget per layer per viewport and warns to zoom in if coverage is incomplete.
-- FAR demonstration does not account for zoning-district rules, special districts, MIH, overlays, mixed-use deductions, bulk, height, yards, floor-area exclusions, conditions, or zoning lot status.
 - No 3D development-envelope simulator is implemented yet.
 - The ZoLa-style menu is now structurally aligned with the supplied screenshots; exact service parity is not achieved. In particular: ZoLa's 3D buildings, 2015 preliminary flood maps, Zoning for Accessibility, Appendix I, Appendix J, Battery Park City polygon, and historic 2013–2023 City Council map are not all independently connected.
 - Parks are represented by the publicly available `v_GFT_Open_Spaces` planning-screening service, which is not the legal inventory of NYC parklands.
@@ -147,7 +142,7 @@ The exact hexadecimal values are used as the layer's base fill colors. The map a
 
 Subway route geometries and station points are sourced from a publicly accessible ArcGIS service: `https://services.arcgis.com/5e8P2PHwGNSRUvq3/ArcGIS/rest/services/New_York_City_Region_Transit_Layers/FeatureServer/`. The application queries routes from layer 6 and station points from layer 0, displays them above building polygons and zoning fills, and permits independent visibility switches. This is a public GIS representation, not live MTA service status or a guaranteed current route diagram.
 
-The base street map stays visible when all optional layers are turned off. **Deselect all layers** also disables subway, aerial, and building overlays without deleting previously selected tax lots. Turning Transit back on re-enables routes and stations if both had been deselected.
+The base street map stays visible when all optional layers are turned off. **Deselect all layers** also disables subway, aerial, and building overlays without deleting previously tax lots. Turning Transit back on re-enables routes and stations if both had been deselected.
 
 ## Deployment troubleshooting
 
@@ -164,3 +159,7 @@ Transit geometry is from a historic public GIS service; route placement and serv
 ## Build 20: LIRR lines and stations
 
 The **Basemaps and transit** section includes a **Long Island Rail Road** checkbox, with independent **LIRR lines** and **LIRR stations** child switches. They start off until enabled; the subway remains independent. The data come from the public regional `New_York_City_Region_Transit_Layers/FeatureServer`: line layer **7** and stop layer **1**. The track colors use the data provider's per-route `color` field (validated six-character RGB hex) with a default teal only where no valid color is provided. The station markers display permanent names at neighborhood zoom 13+, with duplicate platform coordinates deduplicated to reduce clutter. Controls work with the existing mobile bottom sheet. The diagnostics page includes source checks for both LIRR layers. This is public GIS data, not live MTA train status or service schedules.
+
+## Build 22: focused Explore interface
+
+The previous **Selected lots** and **Scenario** tabs and their supporting drawing/CSV/FAR workflows were removed from the active application. Desktop now shows search, parcel information, and zoning layer controls in one scrollable sidebar. Mobile now has only Search, Layers, and Map quick actions. These are intentional scope reductions, not hidden features; multi-lot selection or zoning scenario analysis would need to be implemented afresh if requested later.
