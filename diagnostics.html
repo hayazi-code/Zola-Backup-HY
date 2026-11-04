@@ -15,8 +15,9 @@ const tests=[
  {name:'Special purpose districts',url:ROOT+'nysp/FeatureServer/0/query?'+p({f:'json',where:'1=1',outFields:'SDNAME',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
  {name:'Special subdistricts',url:ROOT+'nysp_sd/FeatureServer/0/query?'+p({f:'json',where:'1=1',outFields:'SUBDIST',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
  {name:'MIH polygons',url:ROOT+'nycmih/FeatureServer/0/query?'+p({f:'json',where:'1=1',outFields:'*',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
+ {name:'NYC OTI building footprint polygons',url:'https://services2.arcgis.com/IsDCghZ73NgoYoz5/ArcGIS/rest/services/NYC_Building_Footprint/FeatureServer/0/query?'+p({f:'geojson',where:'1=1',outFields:'BIN',geometry:JSON.stringify({xmin:-73.956,ymin:40.672,xmax:-73.952,ymax:40.676,spatialReference:{wkid:4326}}),geometryType:'esriGeometryEnvelope',inSR:4326,outSR:4326,spatialRel:'esriSpatialRelIntersects',resultRecordCount:3}),check:j=>j.features?.length>0},
  {name:'NYC GeoSearch / address search',url:'https://geosearch.planninglabs.nyc/v2/search?'+p({text:'120 Broadway, Manhattan',size:1}),check:j=>j.features?.length>0},
- {name:'Application JavaScript',url:'./app.js?v=12',check:(_,t)=>t.includes('const SERVICE_ROOT')}
+ {name:'Application JavaScript',url:'./app.js?v=13',check:(_,t)=>t.includes('const SERVICE_ROOT')}
 ];
 async function run(){
  const body=document.getElementById('tests');body.innerHTML='';
