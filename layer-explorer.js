@@ -93,7 +93,7 @@ const GROUPS=[
 const ITEMS=GROUPS.flatMap(g=>g.items.map(item=>({...item,group:g.name})));
 const YEAR_OPTIONS=['2024','2022','2020','2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924'];
 const VERIFIED_YEARS=new Set(['2018','2016','2014','2012','2010','2008','2006','2004','2001-2','1996','1951','1924']); // Listed in the legacy NYC tile catalog; runtime may still require credentials.
-const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0,mode:'transit',aerialYear:'current',buildingLayer:null,buildingAbort:null,buildingToken:0,baseLoadToken:0};
+const state={map:null,active:new Map(),abort:new Map(),layers:new Map(),metadata:new Map(),tiles:null,loaded:0,mode:'transit',overlays:{transit:true,buildings:false,aerial:false},subway:{routes:true,stations:true},transitLayers:{},transitAborts:{},transitLoadToken:0,aerialYear:'current',buildingLayer:null,buildingAbort:null,buildingToken:0,baseLoadToken:0,baseLayer:null,aerialLayer:null};
 const el=id=>document.getElementById(id),sr=(a)=>String(a??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const baseOptions={
  transit:{name:'Transit',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attribution:'&copy; OpenStreetMap contributors',maxNativeZoom:19},
@@ -233,50 +233,63 @@ function makeTimeline(item){
 }
 function buildBasemaps(){
  const group=document.createElement('details');group.className='layer-group';group.open=true;
- const summary=document.createElement('summary');summary.textContent='Basemaps';const n=document.createElement('small');n.textContent='4';summary.append(n);group.append(summary);
+ const summary=document.createElement('summary');summary.textContent='Basemaps and transit';
+ const count=document.createElement('small');count.textContent='4';summary.append(count);group.append(summary);
  const body=document.createElement('div');body.className='layer-group-items';group.append(body);
- const baseChoices=[
-  {id:'transit',name:'Transit',swatch:'#cc7364',available:true,checked:true,note:'Minimal streets with optional transit lines'},
-  {id:'buildings',name:'Building Footprints',swatch:'#a09da1',available:true,note:'Real NYC OTI building polygon outlines from an ArcGIS FeatureServer. Zoom to 16+.'},
-  {id:'3d',name:'3D Buildings',swatch:'#b8b8be',available:false,note:'Interactive 3D building models require a 3D mapping engine'}
+ const explanation=document.createElement('p');explanation.className='basemap-note';
+ explanation.textContent='Independent checkboxes. Street map stays underneath; switch transit, building footprints, and aerial imagery on or off together or separately.';
+ body.append(explanation);
+ const choices=[
+  {id:'transit',name:'Transit (routes and stations)',swatch:'#d06d60',checked:true,note:'NYC subway lines and stations from a public ArcGIS dataset'},
+  {id:'buildings',name:'Building Footprints',swatch:'#97949b',checked:false,note:'NYC OTI building polygons, visible at zoom 16+'},
+  {id:'3d',name:'3D Buildings',swatch:'#b8b8be',available:false,note:'3D model rendering is not yet implemented'},
+  {id:'aerial',name:'Aerial Imagery',swatch:'#a6bdce',checked:false,note:'Esri imagery under zoning and transit overlays'}
  ];
- for(const option of baseChoices){
+ for(const option of choices){
   const row=document.createElement('label');row.className='catalog-row catalog-label basemap-row';
-  const input=document.createElement('input');input.type='radio';input.name='basemap';input.value=option.id;input.checked=!!option.checked;input.disabled=!option.available;
+  const input=document.createElement('input');input.type='checkbox';input.id='toggle-'+option.id;input.checked=Boolean(option.checked);input.disabled=option.available===false;
   const swatch=document.createElement('i');swatch.className='catalog-swatch';swatch.style.background=option.swatch;
-  row.append(input,swatch,document.createTextNode(option.name));
-  if(!option.available){const badge=document.createElement('span');badge.className='catalog-unavailable';badge.textContent='Not linked';row.append(badge)}
-  row.title=option.note;input.onchange=()=>{if(input.checked)setBasemap(option.id)};
+  const title=document.createElement('span');title.textContent=option.name;row.append(input,swatch,title);
+  if(option.available===false){const badge=document.createElement('span');badge.className='catalog-unavailable';badge.textContent='Not linked';row.append(badge)}
+  row.title=option.note;
+  if(option.available!==false)input.onchange=()=>toggleOverlay(option.id,input.checked);
   body.append(row);
+  if(option.id==='transit'){
+   const children=document.createElement('div');children.className='basemap-child-options';
+   for(const [name,title] of [['routes','Subway routes'],['stations','Subway stations']]){
+    const child=document.createElement('label');child.className='catalog-label basemap-child';
+    const check=document.createElement('input');check.type='checkbox';check.id='transit-'+name;check.checked=true;
+    check.onchange=()=>{state.subway[name]=check.checked;syncTransitVisibility()};
+    child.append(check,document.createTextNode(title));children.append(child);
+   }
+   const indicator=document.createElement('span');indicator.id='transit-layer-status';indicator.className='basemap-note';indicator.textContent='Loading NYC subway layers…';
+   children.append(indicator);body.append(children);
+  }
+  if(option.id==='aerial'){
+   const years=document.createElement('div');years.className='aerial-year-grid';
+   const latest=document.createElement('label');latest.className='aerial-year';
+   const latestRadio=document.createElement('input');latestRadio.type='radio';latestRadio.name='aerial-year';latestRadio.value='current';latestRadio.checked=true;
+   latestRadio.onchange=()=>{if(latestRadio.checked){state.aerialYear='current';if(!state.overlays.aerial){el('toggle-aerial').checked=true;toggleOverlay('aerial',true)}else loadAerial() }};
+   latest.append(latestRadio,document.createTextNode('Current'));years.append(latest);
+   for(const year of YEAR_OPTIONS){
+    const label=document.createElement('label');label.className='aerial-year';
+    const radio=document.createElement('input');radio.type='radio';radio.name='aerial-year';radio.value=year;radio.disabled=!VERIFIED_YEARS.has(year);
+    radio.onchange=()=>{if(radio.checked){state.aerialYear=year;if(!state.overlays.aerial){el('toggle-aerial').checked=true;toggleOverlay('aerial',true)}else loadAerial()}};
+    label.append(radio,document.createTextNode(year));if(radio.disabled)label.title='No verified keyless imagery source for '+year;
+    years.append(label);
+   }
+   body.append(years);
+   const note=document.createElement('div');note.className='basemap-note';
+   note.textContent='Current imagery is from Esri. Historical NYC years may require credentials; failed tiles revert to current imagery.';
+   body.append(note);
+  }
  }
- const aerial=document.createElement('div');aerial.className='catalog-node';
- const aerialRow=document.createElement('label');aerialRow.className='catalog-row catalog-label basemap-row';
- const aerialRadio=document.createElement('input');aerialRadio.type='radio';aerialRadio.name='basemap';aerialRadio.value='aerial';
- const sw=document.createElement('i');sw.className='catalog-swatch';sw.style.background='#a6bdce';
- aerialRow.append(aerialRadio,sw,document.createTextNode('Aerial Imagery'));aerial.append(aerialRow);
- aerialRadio.onchange=()=>{if(aerialRadio.checked){state.aerialYear='current';latestRadio.checked=true;setBasemap('aerial')}};
- const explanation=document.createElement('div');explanation.className='basemap-note';
- explanation.textContent='Current imagery uses Esri World Imagery. Historic NYC tiles may require access; if unavailable the map automatically returns to current imagery.';
- aerial.append(explanation);
- const years=document.createElement('div');years.className='aerial-year-grid';
- const latest=document.createElement('label');latest.className='aerial-year aerial-current';
- const latestRadio=document.createElement('input');latestRadio.type='radio';latestRadio.name='aerial-year';latestRadio.value='current';latestRadio.checked=true;
- latest.append(latestRadio,document.createTextNode('Current imagery'));years.append(latest);
- latestRadio.onchange=()=>{if(latestRadio.checked){state.aerialYear='current';aerialRadio.checked=true;setBasemap('aerial')}};
- for(const year of YEAR_OPTIONS){
-  const label=document.createElement('label');label.className='aerial-year';
-  const radio=document.createElement('input');radio.type='radio';radio.name='aerial-year';radio.value=year;radio.checked=false;radio.disabled=!VERIFIED_YEARS.has(year);
-  label.append(radio,document.createTextNode(year));
-  if(radio.disabled)label.title='NYC map tiles for '+year+' have not been verified';
-  radio.onchange=()=>{if(radio.checked){state.aerialYear=year;aerialRadio.checked=true;setBasemap('aerial')}};
-  years.append(label);
- }
- aerial.append(years);body.append(aerial);
  const status=document.createElement('p');status.id='basemap-status';status.className='basemap-status';
- status.textContent='Using minimal street map. Choose a basemap.';
+ status.textContent='Minimal OpenStreetMap base map is always visible.';
  body.append(status);
  return group;
 }
+
 function filter(){
  const q=el('layer-search').value.trim().toLowerCase();
  for(const group of document.querySelectorAll('.layer-group')){
