@@ -9,7 +9,7 @@
  <link rel="preconnect" href="https://services5.arcgis.com">
  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
- <link rel="stylesheet" href="styles.css?v=14">
+ <link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
 <header>
@@ -36,7 +36,17 @@
    </div>
   </div></div>
  </div>
- <aside class="side-panel" aria-label="Search, zoning layers, and property information">
+ <aside class="side-panel" id="mobile-sheet" aria-label="Search, zoning layers, and property information">
+  <div class="mobile-sheet-bar" id="mobile-sheet-bar">
+   <button id="mobile-sheet-toggle" class="mobile-sheet-handle" type="button" aria-label="Expand map controls" aria-expanded="false" aria-controls="mobile-sheet-body"><span class="mobile-grip"></span><span id="mobile-sheet-title">Explore NYC zoning</span><span class="mobile-chevron" aria-hidden="true">⌃</span></button>
+   <div class="mobile-quick-actions" role="group" aria-label="Mobile map tools">
+    <button type="button" id="mobile-search" aria-label="Open property search">⌕ <span>Search</span></button>
+    <button type="button" id="mobile-layers" aria-label="Open map layers">▤ <span>Layers</span></button>
+    <button type="button" id="mobile-lots" aria-label="Open selected tax lots">▣ <span>Lots</span></button>
+    <button type="button" id="mobile-close" aria-label="Close map controls">⌄ <span>Map</span></button>
+   </div>
+  </div>
+  <div class="mobile-sheet-body" id="mobile-sheet-body">
   <div class="search-block">
    <div class="eyebrow">Search NYC</div>
    <div class="search-field">
@@ -98,6 +108,7 @@
    <div class="footer-note">Independent research tool. Data: <a target="_blank" rel="noopener" href="https://www.nyc.gov/content/planning/pages/resources/datasets">NYC Department of City Planning</a>. Check the <a target="_blank" rel="noopener" href="https://zr.planning.nyc.gov/">Zoning Resolution</a>. <a href="diagnostics.html" target="_blank" rel="noopener">Test core connections</a> · <a href="layer-diagnostics.html" target="_blank" rel="noopener">Test all layer services</a> for legally operative rules.</div>
   </div>
   <div id="status" class="status" role="status" aria-live="polite">Loading NYC map…</div>
+  </div>
  </aside>
 </main>
 <dialog id="about-modal">
@@ -111,7 +122,8 @@
 </dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-<script defer src="layer-explorer.js?v=14"></script>
-<script defer src="app.js?v=13"></script>
+<script defer src="layer-explorer.js?v=15"></script>
+<script defer src="app.js?v=15"></script>
+<script defer src="mobile.js?v=15"></script>
 </body>
 </html>
