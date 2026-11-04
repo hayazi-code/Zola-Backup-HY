@@ -16,7 +16,7 @@ const tests=[
  {name:'Special subdistricts',url:ROOT+'nysp_sd/FeatureServer/0/query?'+p({f:'json',where:'1=1',outFields:'SUBDIST',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
  {name:'MIH polygons',url:ROOT+'nycmih/FeatureServer/0/query?'+p({f:'json',where:'1=1',outFields:'*',returnGeometry:false,resultRecordCount:1}),check:j=>j.features?.length>0},
  {name:'NYC GeoSearch / address search',url:'https://geosearch.planninglabs.nyc/v2/search?'+p({text:'120 Broadway, Manhattan',size:1}),check:j=>j.features?.length>0},
- {name:'Application JavaScript',url:'./app.js?v=2',check:(_,t)=>t.includes('const SERVICE_ROOT')}
+ {name:'Application JavaScript',url:'./app.js?v=12',check:(_,t)=>t.includes('const SERVICE_ROOT')}
 ];
 async function run(){
  const body=document.getElementById('tests');body.innerHTML='';
