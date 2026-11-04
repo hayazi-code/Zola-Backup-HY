@@ -48,6 +48,7 @@ const apiLayer=key=>SERVICE_ROOT+URLS[key]+'/FeatureServer/0/query';
 let map,mode='inspect',drawTool=null,drawHighlight,inspectLayer;
 const visibleLayers={},layerGroups={},requests={};
 let currentParcel=null,selected=new Map(),searchTimer=null,searchSeq=0,loadTimer=null,selectionBusy=false;
+let parcelLookupSeq=0,parcelLookupController=null;
 const flags={zoning:true,commercial:false,special:false,subdistrict:false,mih:false,lots:true,landuse:false};
 let toggleToken=0;
 
@@ -217,24 +218,34 @@ function renderSelected(){
 }
 function focusFeatures(features){if(!features.length)return;const b=L.geoJSON({type:'FeatureCollection',features}).getBounds();if(b.isValid())map.fitBounds(b.pad(.5),{maxZoom:18})}
 async function inspectAt(latlng){
- if(selectionBusy)return;notice('Looking up tax lot…');
+ if(selectionBusy)return;
+ const seq=++parcelLookupSeq;
+ parcelLookupController?.abort();
+ const controller=new AbortController();parcelLookupController=controller;
+ notice('Looking up tax lot…');
  try{
   const geom=JSON.stringify({x:latlng.lng,y:latlng.lat,spatialReference:{wkid:4326}});
-  const data=await request(apiLayer('lots'),{f:'geojson',where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',spatialRel:'esriSpatialRelIntersects',resultRecordCount:10});
+  const data=await request(apiLayer('lots'),{f:'geojson',where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',spatialRel:'esriSpatialRelIntersects',resultRecordCount:10},controller.signal);
+  if(controller.signal.aborted||seq!==parcelLookupSeq)return;
   if(!data.features?.length)return notice('No mapped tax lot at this location.','warn');
   inspect(data.features[0],{add:mode==='select'});notice('Parcel information loaded.','good');
- }catch(e){notice('Parcel lookup failed: '+e.message,'error')}
+ }catch(e){if(e.name!=='AbortError'&&seq===parcelLookupSeq)notice('Parcel lookup failed: '+e.message,'error')}
 }
 async function lookupBBL(value){
- const b=String(value).trim();if(!/^[1-5]\d{9}$/.test(b))return notice('Enter a 10-digit NYC BBL starting with 1–5.','warn');
+ const b=String(value).trim();
+ if(!/^[1-5]\d{9}$/.test(b))return notice('Enter a 10-digit NYC BBL starting with 1–5.','warn');
+ const seq=++parcelLookupSeq;
+ parcelLookupController?.abort();
+ const controller=new AbortController();parcelLookupController=controller;
  notice('Searching for BBL '+b+'…');
  try{
-  // MapPLUTO BBL is stored as a numeric field, not a string.
-  const data=await request(apiLayer('lots'),{f:'geojson',where:'BBL = '+Number(b),outFields:'*',returnGeometry:true,outSR:4326,resultRecordCount:10});
+  const data=await request(apiLayer('lots'),{f:'geojson',where:'BBL = '+Number(b),outFields:'*',returnGeometry:true,outSR:4326,resultRecordCount:10},controller.signal);
+  if(controller.signal.aborted||seq!==parcelLookupSeq)return;
   if(!data.features?.length)return notice('No MapPLUTO parcel found for this BBL.','warn');
   inspect(data.features[0]);focusFeatures(data.features);notice('Found BBL '+b,'good');
- }catch(e){notice('BBL search failed: '+e.message,'error')}
+ }catch(e){if(e.name!=='AbortError'&&seq===parcelLookupSeq)notice('BBL search failed: '+e.message,'error')}
 }
+
 function bblFromGeosearch(f){
  const p=f.properties||{},a=p.addendum||{};
  const candidates=[a.pad?.bbl,a.bbl,p.pad_bbl,p.bbl];
