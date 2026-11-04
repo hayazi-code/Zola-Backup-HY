@@ -8,11 +8,11 @@
  <title>ZoLa Backup HY | NYC Zoning &amp; Land Use</title>
  <link rel="preconnect" href="https://services5.arcgis.com">
  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
- <link rel="stylesheet" href="styles.css?v=31">
+ <link rel="stylesheet" href="styles.css?v=32">
 </head>
 <body>
 <header>
- <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 31</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
+ <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 32</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
  <div class="header-actions"><button id="info-button" title="About this independent application">About &amp; data</button></div>
 </header>
 <main class="workspace">
@@ -27,7 +27,7 @@
    <button id="goto-staten">Staten Island</button>
   </div>
   <div class="geolocation-tools" role="group" aria-label="Your location on map">
-   <button id="locate-me" type="button" aria-label="Show my current location on the map" aria-pressed="false" title="Show my location (requires permission)">◎ <span id="locate-me-label">Locate me</span></button>
+   <button id="locate-me" type="button" aria-label="Show my current location on the map" aria-pressed="false" title="Show my location (requires permission)"><span class="locate-glyph" aria-hidden="true">◎</span><span id="locate-me-label" class="visually-hidden">Locate me</span></button>
    <button id="recenter-me" type="button" hidden title="Center map on your last known position" aria-label="Center map on my current position">⌖</button>
   </div>
   <div class="map-key" id="map-key" role="region" aria-label="Map legend">
