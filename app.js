@@ -150,7 +150,7 @@ function inspect(f,{add=false}={}){
  DOM('property-toggle').onclick=()=>{toggleLot(f);inspect(f,{add:false})};
  DOM('property-zoom').onclick=()=>focusFeatures([f]);
  DOM('property-share').onclick=()=>shareLot(b);
- showPanel('explore');
+ if(!add)showPanel('explore');
 }
 function renderSelected(){
  const features=[...selected.values()],count=features.length;
@@ -320,7 +320,7 @@ function start(){
  createLayers();bindControls();selectMode('inspect');renderSelected();
  map.on('moveend',refreshMap);
  map.on('click',e=>inspectAt(e.latlng));
- map.on(L.Draw.Event.CREATED,e=>{if(drawTool)drawTool.disable();drawHighlight.clearLayers();drawHighlight.addLayer(e.layer);selectByGeometry(e.layer.toGeoJSON())});
+ map.on('draw:created',e=>{if(drawTool)drawTool.disable();drawHighlight.clearLayers();drawHighlight.addLayer(e.layer);selectByGeometry(e.layer.toGeoJSON())});
  const url=new URL(location.href),bbl=url.searchParams.get('bbl');if(bbl)lookupBBL(bbl);
  refreshMap();
  notice('Ready. Search an address or click a tax lot. Zoom in for lot boundaries.','good');
