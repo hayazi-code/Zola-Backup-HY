@@ -319,7 +319,7 @@ function start(){
  }).addTo(map);
  createLayers();window.setupLayerExplorer?.(map);bindControls();selectMode('inspect');renderSelected();
  map.on('moveend',refreshMap);
- map.on('click',e=>inspectAt(e.latlng));
+ map.on('click',e=>{if(drawTool?.enabled?.()||selectionBusy)return;inspectAt(e.latlng)});
  map.on('draw:created',e=>{if(drawTool)drawTool.disable();drawHighlight.clearLayers();drawHighlight.addLayer(e.layer);selectByGeometry(e.layer.toGeoJSON())});
  const url=new URL(location.href),bbl=url.searchParams.get('bbl');if(bbl)lookupBBL(bbl);
  refreshMap();
