@@ -18,7 +18,7 @@ const GROUPS=[
    N('commercial-districts','Commercial Districts',{checked:true,filterGroup:true,swatch:'#e88d94',expanded:true,children:zones('C',1,8)}),
    N('manufacturing-districts','Manufacturing Districts',{checked:true,filterGroup:true,swatch:'#b6a0cf',expanded:true,children:zones('M',1,3)}),
    N('residence-districts','Residence Districts',{checked:true,filterGroup:true,swatch:'#ecd081',expanded:true,children:zones('R',1,10)}),
-   N('parks','Parks',{checked:true,kind:'filter',swatch:'#a5d09c'}),
+   N('parks','Parks',{checked:true,kind:'filter',source:'v_GFT_Open_Spaces',color:'#78b57a',minZoom:13,swatch:'#a5d09c',note:'Open-space planning screening layer; not a legally authoritative parks inventory.'}),
    N('battery-park-city','Battery Park City',{kind:'filter',checked:true,available:false,note:'The standalone Battery Park City boundary is not yet connected.',swatch:'#ababab'})
   ]}),
   Z('commercial','Commercial Overlays',{core:'commercial',source:'nyco',minZoom:14,swatch:'#e16a90',expanded:true,children:[
@@ -162,6 +162,7 @@ function renderItem(item,depth,top){
   if(depth===0){if(item.core){ /* app.js binds the core change callback */ }
    else if(item.available!==false){checkbox.checked?activate(item):deactivate(item)}}
   else{
+   if(item.source&&item.available!==false){checkbox.checked?activate(item):deactivate(item)}
    updateParentCheckState(top);if(top.core)window.ZOLA_RELOAD_CORE?.(top.core);
    else if(top.available!==false&&state.active.has(top.id))load(top);
   }
@@ -174,6 +175,7 @@ function renderItem(item,depth,top){
   for(const child of item.children)children.append(renderItem(child,depth+1,top));
   wrapper.append(children);
  }
+ if(depth>0&&item.source&&item.checked&&item.available!==false)activate(item);
  if(depth===0&&item.timeline)wrapper.append(makeTimeline(item));
  return wrapper;
 }
@@ -353,7 +355,7 @@ function makeLayer(item){
  });
 }
 function source(item){return ROOT+item.source+'/FeatureServer/'+(item.layer||0)}
-function onVisibleViewport(){clearTimeout(state.loaded);state.loaded=setTimeout(()=>{for(const item of ITEMS){if(state.active.has(item.id))load(item)}},420)}
+function onVisibleViewport(){clearTimeout(state.loaded);state.loaded=setTimeout(()=>{for(const entry of state.active.values())if(entry.item)load(entry.item)},420)}
 async function fetchJSON(url,params={},signal){
  const u=new URL(url);for(const [k,v] of Object.entries(params))u.searchParams.set(k,String(v));
  const response=await fetch(u,{signal});if(!response.ok)throw Error('HTTP '+response.status);
@@ -390,7 +392,7 @@ async function load(item){
 function activate(item){
  if(state.active.has(item.id))return;
  const layer=makeLayer(item);layer.addTo(state.map);
- state.active.set(item.id,{layer,abort:null});load(item);
+ state.active.set(item.id,{item,layer,abort:null});load(item);
 }
 function deactivate(item){
  const entry=state.active.get(item.id);if(!entry)return;
