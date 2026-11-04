@@ -27,7 +27,7 @@ const GROUPS=[
   ]}),
   Z('zoning-index','Zoning Map Index',{source:'Zoning_Index_Map',minZoom:11,color:'#536cb2',swatch:'#8489ad',outline:true}),
   Z('zma','Zoning Map Amendments',{source:'nyzma',minZoom:12,color:'#ed8a38',swatch:'#99b27d',outline:true,timeline:true}),
-  Z('pending-zma','Pending Zoning Map Amendments',{available:false,swatch:'#e27370',note:'A verified current pending-application map feed has not yet been connected.'}),
+  Z('pending-zma','Pending Zoning Map Amendments',{source:'nyzma',where:"STATUS = 'Certified'",field:'PROJECT_NAME',minZoom:11,color:'#e97870',swatch:'#e27370',outline:true,note:'Certified rezoning boundaries reported by the nyzma GIS service; not all pending applications.'}),
   Z('special','Special Purpose Districts',{core:'special',source:'nysp',swatch:'#617849',color:'#795ca8'}),
   Z('subdistrict','Special Purpose Subdistricts',{core:'subdistrict',source:'nysp_sd',swatch:'#8eaf39',color:'#a07ebc'})
  ]},
@@ -43,10 +43,10 @@ const GROUPS=[
    N('parking-special','Special 25-241 Parking Provisions',{kind:'filter',checked:true,swatch:'#d7ece5'}),
    N('parking-beyond','Beyond the Greater Transit Zone',{kind:'filter',checked:true,swatch:'#90c9cc'})
   ],note:'Subarea category filtering requires validation against the layer fields.'}),
-  S('fresh-zones','FRESH Zones',{available:false,swatch:'#e4ceac',expanded:true,note:'FRESH geographic service is not yet verified.',children:[
-   N('fresh-zoning','Zoning incentives',{available:false,swatch:'#c2ebe3'}),
-   N('fresh-both','Zoning and discretionary tax incentives',{available:false,swatch:'#b7dbc7'}),
-   N('fresh-tax','Discretionary tax incentives',{available:false,swatch:'#dceab5'})
+  S('fresh-zones','FRESH Zones',{source:'FRESH_Food_Stores',field:'Name',color:'#81b263',swatch:'#e4ceac',expanded:true,note:'DCP published FRESH eligibility geographies, by incentive type.',children:[
+   N('fresh-zoning','Zoning incentives',{kind:'filter',checked:true,swatch:'#89cd66'}),
+   N('fresh-both','Zoning and discretionary tax incentives',{kind:'filter',checked:true,swatch:'#5c8944'}),
+   N('fresh-tax','Discretionary tax incentives',{kind:'filter',checked:true,swatch:'#b2b2b2'})
   ]}),
   S('limited-height','Limited Height Districts',{source:'nylh',swatch:'#c6b6a9',color:'#bb7a63'}),
   S('low-density','Lower Density Growth Management Areas',{source:'nyldgma',swatch:'#debf9b',color:'#c5a854'}),
@@ -299,6 +299,13 @@ function optionalVisible(item,f){
  const enabled=id=>checked(id);
  if(item.id==='council')return enabled('council-new');
  if(item.id==='edesignations')return enabled('edesignation-item');
+ if(item.id==='fresh-zones'){
+  const label=String(p.Name||'').toLowerCase();
+  if(label==='zoning incentives')return enabled('fresh-zoning');
+  if(label==='zoning and discretionary tax incentives')return enabled('fresh-both');
+  if(label==='discretionary tax incentives')return enabled('fresh-tax');
+  return true;
+ }
  if(item.id==='firm2007'){
   const zone=String(p.FLD_ZONE||p.ZONE||p.FLD_ZONE1||'').toUpperCase();
   if(!zone)return true;
@@ -314,7 +321,7 @@ function optionalVisible(item,f){
  }
  if(item.id==='zma'&&window.ZOLA_ZMA_DATE_RANGE){
   const r=window.ZOLA_ZMA_DATE_RANGE;
-  const field=Object.entries(p).find(([k,v])=>/^(ADOPT_DATE|ADOPTION_DATE|EFFECTIVE_DATE|EFFECTDATE|REZ_DATE)$/i.test(k)&&v!=null);
+  const field=Object.entries(p).find(([k,v])=>/^(ADOPT_DATE|ADOPTION_DATE|EFFECTIVE_DATE|EFFECTDATE|EFFECTIVE|REZ_DATE)$/i.test(k)&&v!=null);
   if(field){
    const time=Number(field[1])>1000000000?new Date(Number(field[1])):new Date(field[1]);
    if(!Number.isNaN(time.getTime())){
@@ -327,7 +334,11 @@ function optionalVisible(item,f){
 }
 window.ZOLA_VISIBLE_FEATURE=visibleCore;
 function styleFor(item,f){
- const col=item.color||'#7e6a99', geom=f.geometry?.type||'';
+ let col=item.color||'#7e6a99';const geom=f.geometry?.type||'';
+ if(item.id==='fresh-zones'){
+  const name=String(f.properties?.Name||'');
+  col=name==='Zoning incentives'?'#89CD66':name==='Zoning and discretionary tax incentives'?'#5C8944':name==='Discretionary tax incentives'?'#B2B2B2':col;
+ }
  if(geom.includes('Line'))return {color:col,weight:2,opacity:.82,dashArray:item.outline?'5 4':null};
  return {color:col,weight:item.outline?2:1,fillColor:col,fillOpacity:item.outline?.03:.16,opacity:.95,dashArray:item.outline?'5 5':null};
 }
