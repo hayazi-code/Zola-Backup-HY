@@ -114,3 +114,7 @@
  .aerial-year-grid{padding-left:27px}
  .zoning-timeline{padding-left:24px}
 }
+
+/* Match ZoLa category swatches at every nesting level. */
+.catalog-grid-children .catalog-swatch{display:inline-block;width:7px;height:7px;flex:0 0 7px}
+.catalog-grid-children .catalog-label{gap:3px}
