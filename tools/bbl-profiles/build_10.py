@@ -215,7 +215,7 @@ def make_deck(rows):
         if r.get("street_path"):
             text(sl,"KartaView candidate; façade not independently verified",6.95,6.56,5.65,.24,8,"#FFF7EF")
         text(sl,"View exact BBL on ZoLa",.54,7.09,3.1,.22,9,"#0E6E9B",False,"https://zola.planning.nyc.gov/bbl/"+r["BBL"])
-        text(sl,"Open Google Street View",4.12,7.09,3.3,.22,9,"#0E6E9B",False,"https://www.google.com/maps/search/?api=1&query="+quote(r["Address"]+", Brooklyn, NY"))
+        text(sl,"Open Google Street View",4.12,7.09,3.3,.22,9,"#0E6E9B",False,("https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="+str(r["Latitude"])+","+str(r["Longitude"]) if r.get("Latitude") and r.get("Longitude") else "https://www.google.com/maps/search/?api=1&query="+quote(r["Address"]+", Brooklyn, NY")))
         text(sl,"GIS polygons: "+r["gis"]+"   |   Street image: "+r["street_status"][:35],7.25,7.08,5.55,.28,7.8,"#697D87")
     out=DEST/"Brooklyn_10_BBL_Site_Profiles.pptx";ppt.save(out);return out
 def main():
@@ -235,6 +235,8 @@ def main():
             info["LandUse_Code"]=f["attributes"].get("LandUse","")
             info["Zoning"]=f["attributes"].get("ZoneDist1","")
             info["LotArea"]=f["attributes"].get("LotArea","")
+            info["Latitude"]=f["attributes"].get("Latitude","")
+            info["Longitude"]=f["attributes"].get("Longitude","")
             for k in ["land","aerial"]:
                 try:
                     path,ok,n=render(f,idx,k,1120,980 if k=="land" else 540)
@@ -248,7 +250,7 @@ def main():
         print("DONE",idx,b,info["gis"],info["land"],info["aerial"],info["street_status"],flush=True)
     out=make_deck(rows)
     with (DEST/"Brooklyn_10_BBL_QA.csv").open("w",newline="",encoding="utf-8-sig") as fp:
-        cols=["Slide","BBL","Address","MapPLUTO_Address","gis","land","aerial","street_status","LandUse_Code","Zoning","LotArea"]
+        cols=["Slide","BBL","Address","MapPLUTO_Address","gis","land","aerial","street_status","LandUse_Code","Zoning","LotArea","Latitude","Longitude"]
         dw=csv.DictWriter(fp,fieldnames=cols,extrasaction="ignore");dw.writeheader();dw.writerows(rows)
     with (DEST/"Brooklyn_10_BBL_QA.json").open("w") as fp:
         json.dump([{k:(str(v) if isinstance(v,Path) else v) for k,v in d.items()} for d in rows],fp,indent=2)
