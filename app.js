@@ -91,8 +91,8 @@ function createLayers(){
    style:layerStyles[key],
    onEachFeature:(f,l)=>{
     if(key!=='lots')l.bindTooltip(safe(featureLabel(key,f.properties||{})),{sticky:!(key==='zoning'&&map.getZoom()>=15),permanent:key==='zoning'&&map.getZoom()>=15,direction:key==='zoning'?'center':'top',className:key==='zoning'?'zoning-label':'district-tip'});
-    if(key==='lots')l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);showParcelPreview(f,e.latlng)});
-    else l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);inspectAt(e.latlng)});
+    if(key==='lots')l.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);try{showParcelPreview(f,e.latlng)}catch(error){notice('Parcel preview error: '+error.message,'error');inspect(f)}});
+    else l.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);inspectAt(e.latlng)});
    }
   });
  }
@@ -256,13 +256,14 @@ function showParcelPreview(f,latlng,{fromLookup=false}={}){
  card.append(heading,name,number,grid,action);
  if(parcelPreview)map.closePopup(parcelPreview);
  // Anchor at the clicked location, not at a fabricated parcel centroid.
- parcelPreview=L.popup({className:'parcel-quick-popup',maxWidth:310,minWidth:255,autoPan:true,
+ parcelPreview=L.popup({className:'parcel-quick-popup',maxWidth:310,minWidth:255,autoPan:false,
   autoPanPaddingTopLeft:[18,65],autoPanPaddingBottomRight:[18,window.matchMedia('(max-width: 740px)').matches?115:25]})
   .setLatLng(latlng||L.geoJSON(f).getBounds().getCenter()).setContent(card);
  parcelPreview.openOn(map);
  notice('Parcel preview loaded. Choose View full details to open the property panel.','good');
 }
 function inspect(f){
+ if(window.matchMedia('(min-width: 741px)').matches&&document.body.classList.contains('desktop-menu-hidden'))DOM('desktop-menu-toggle')?.click();
  highlightParcel(f);
  const p=f.properties||{},b=bblOf(f),zones=[p.ZoneDist1,p.ZoneDist2,p.ZoneDist3,p.ZoneDist4].filter(Boolean);
  const row=(title,value)=>'<div class="detail-row"><span>'+safe(title)+'</span><strong>'+safe(value==null||value===''?'Not available':value)+'</strong></div>';
@@ -282,6 +283,20 @@ function inspect(f){
  if(window.matchMedia('(max-width: 740px)').matches)requestAnimationFrame(()=>DOM('property-info')?.scrollIntoView({block:'start',behavior:'smooth'}));
 }
 function focusFeatures(features){if(!features.length)return;const b=L.geoJSON({type:'FeatureCollection',features}).getBounds();if(b.isValid())map.fitBounds(b.pad(.5),{maxZoom:18})}
+function parcelLookupFailure(latlng,message){
+ notice(message,'error');
+ if(parcelPreview)map.closePopup(parcelPreview);
+ const card=document.createElement('div');
+ card.className='parcel-preview-card';
+ const heading=document.createElement('strong');heading.textContent='Could not load this tax lot';
+ const description=document.createElement('p');description.textContent=message;
+ const retry=document.createElement('button');retry.type='button';
+ retry.className='parcel-preview-details';retry.textContent='Retry parcel lookup';
+ retry.addEventListener('click',()=>{map.closePopup(parcelPreview);inspectAt(latlng)});
+ card.append(heading,description,retry);
+ parcelPreview=L.popup({className:'parcel-quick-popup',maxWidth:310,minWidth:255,autoPan:false})
+  .setLatLng(latlng).setContent(card).openOn(map);
+}
 async function inspectAt(latlng){
  const seq=++parcelLookupSeq;
  parcelLookupController?.abort();
@@ -289,11 +304,23 @@ async function inspectAt(latlng){
  notice('Looking up tax lot…');
  try{
   const geom=JSON.stringify({x:latlng.lng,y:latlng.lat,spatialReference:{wkid:4326}});
-  const data=await request(apiLayer('lots'),{f:'geojson',where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',spatialRel:'esriSpatialRelIntersects',resultRecordCount:10},controller.signal,{priority:2});
+  const data=await request(apiLayer('lots'),{
+   f:'geojson',where:'1=1',outFields:FIELDS.lots,returnGeometry:true,
+   outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',
+   spatialRel:'esriSpatialRelIntersects',resultRecordCount:5
+  },controller.signal,{priority:5,timeout:10000,cache:false});
   if(controller.signal.aborted||seq!==parcelLookupSeq)return;
-  if(!data.features?.length)return notice('No mapped tax lot at this location.','warn');
+  if(!data.features?.length){
+   notice('No mapped tax lot at this location. Zoom in and try again.','warn');
+   return;
+  }
   showParcelPreview(data.features[0],latlng,{fromLookup:true});
- }catch(e){if(e.name!=='AbortError'&&seq===parcelLookupSeq)notice('Parcel lookup failed: '+e.message,'error')}
+ }catch(e){
+  if(controller.signal.aborted||seq!==parcelLookupSeq||e.name==='AbortError')return;
+  parcelLookupFailure(latlng,'Parcel service unavailable: '+e.message+'.');
+ }finally{
+  if(parcelLookupController===controller)parcelLookupController=null;
+ }
 }
 async function lookupBBL(value){
  const b=String(value).trim();
@@ -303,7 +330,7 @@ async function lookupBBL(value){
  const controller=new AbortController();parcelLookupController=controller;
  notice('Searching for BBL '+b+'…');
  try{
-  const data=await request(apiLayer('lots'),{f:'geojson',where:'BBL = '+Number(b),outFields:'*',returnGeometry:true,outSR:4326,resultRecordCount:10},controller.signal,{priority:2});
+  const data=await request(apiLayer('lots'),{f:'geojson',where:'BBL = '+Number(b),outFields:FIELDS.lots,returnGeometry:true,outSR:4326,resultRecordCount:5},controller.signal,{priority:5,timeout:10000,cache:false});
   if(controller.signal.aborted||seq!==parcelLookupSeq)return;
   if(!data.features?.length)return notice('No MapPLUTO parcel found for this BBL.','warn');
   inspect(data.features[0]);focusFeatures(data.features);notice('Found BBL '+b,'good');
