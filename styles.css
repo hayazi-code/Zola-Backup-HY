@@ -865,3 +865,11 @@
  header .header-actions #desktop-menu-toggle:focus-visible{outline:2px solid #fff;outline-offset:2px}
 }
 @media(max-width:740px){header .header-actions #desktop-menu-toggle{display:none!important}}
+
+/* Build 44: explicit hidden state wins over older sidebar display overrides. */
+@media(min-width:741px){
+ body.desktop-menu-hidden .workspace > #mobile-sheet,
+ .workspace > #mobile-sheet[hidden]{display:none!important}
+ body.desktop-menu-hidden .workspace > .map-wrap{flex:1 1 100%;width:100%;min-width:0}
+}
+@media(max-width:740px){.workspace > #mobile-sheet[hidden]{display:flex!important}}
