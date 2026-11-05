@@ -132,32 +132,47 @@ function build(){
  el('labels-on').onchange=()=>{if(state.map)state.map.getContainer().classList.toggle('hide-zoning-labels',!el('labels-on').checked)};
 }
 function deselectAllLayers(){
- // All map data toggles, including those initially enabled, are turned off.
- // Keep the basemap and current inspected parcel. No multi-lot selection workflow is active.
- // The catalog is generated dynamically, so clear actual DOM checkboxes,
- // not just a subset of items in the data model.
+ // First clear every checkbox in the catalog, including independent transit
+ // and basemap switches. Leave display-only outline configuration unchanged.
  for(const cb of document.querySelectorAll('#layer-tree input[type="checkbox"]:not(#lot-outline-visible)')){
   cb.checked=false;
   cb.indeterminate=false;
  }
- for(const item of ITEMS){
-  if(item.core){
-   const cb=el('layer-'+item.core);
-   if(cb)cb.dispatchEvent(new Event('change'));
-  }
- }
+ // Cancel pending zoom/pan reloads before a layer can be reintroduced.
+ clearTimeout(state.loaded);
+ state.loaded=null;
+ // Shut off standalone catalog overlays and all of their network operations.
  for(const entry of [...state.active.values()]){
   if(entry.item)deactivate(entry.item);
  }
- // Keep the master reset synchronized with independently toggleable basemap overlays.
- for(const id of ['transit','lirr','buildings','aerial'])toggleOverlay(id,false);
  state.subway.routes=false;state.subway.stations=false;
  state.lirr.routes=false;state.lirr.stations=false;
+ for(const kind of ['routes','stations']){
+  state.transitAborts[kind]?.abort();
+  state.lirrAborts[kind]?.abort();
+ }
+ ++state.transitLoadToken;
+ ++state.lirrLoadToken;
+ for(const id of ['transit','lirr','buildings','aerial'])toggleOverlay(id,false);
+ // Even detached route groups are cleared so stale results cannot reappear.
+ for(const layer of Object.values(state.transitLayers))layer?.clearLayers();
+ for(const layer of Object.values(state.lirrLayers))layer?.clearLayers();
+ // The core map's own delayed reload must also be canceled and cleared.
+ // Do not dispatch seven change events: those queue more refresh work.
+ if(window.ZOLA_CLEAR_CORE_LAYERS)window.ZOLA_CLEAR_CORE_LAYERS();
+ else for(const item of ITEMS){
+  if(item.core)el('layer-'+item.core)?.dispatchEvent(new Event('change'));
+ }
  const labels=el('labels-on');
- if(labels){labels.checked=false;state.map?.getContainer().classList.add('hide-zoning-labels')}
- window.ZOLA_SYNC_CHILDREN?.();
+ if(labels)labels.checked=false;
+ state.map?.getContainer().classList.add('hide-zoning-labels');
+ // Preserve the one deliberately selected parcel, not optional thematic layers.
+ window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS?.();
  const notice=el('status');
- if(notice){notice.textContent='All map layers deselected. Your basemap and current inspected parcel are unchanged.';notice.dataset.kind='good'}
+ if(notice){
+  notice.textContent='Optional layers cleared. Street basemap and selected parcel remain visible.';
+  notice.dataset.kind='good';
+ }
 }
 function allNodes(){const out=[];function walk(list){for(const n of list){out.push(n);if(n.children)walk(n.children)}}for(const g of GROUPS)walk(g.items);return out}
 function findInput(item,depth){return el((depth===0?(item.core?'layer-':'extra-'):'sub-')+item.id)}
