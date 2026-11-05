@@ -45,6 +45,14 @@ const LANDUSE_STANDARD_URL='https://www.nyc.gov/assets/planning/download/pdf/app
 const FORMAT=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const fmt=v=>Number.isFinite(Number(v))&&v!==''&&v!=null?FORMAT.format(Number(v)):'Not available';
+const farDisplay=v=>v!==''&&v!=null&&Number.isFinite(Number(v))&&Number(v)>0?Number(v).toFixed(2):null;
+// MapPLUTO reports use-specific zoning FAR ceilings, not a single interchangeable FAR.
+function allowableFarSummary(properties={}){
+ const parts=[['Res',properties.ResidFAR],['Comm',properties.CommFAR],['CF',properties.FacilFAR]]
+  .map(([label,value])=>({label,value:farDisplay(value)}))
+  .filter(entry=>entry.value!==null);
+ return parts.length?parts.map(entry=>entry.label+' '+entry.value).join(' · '):'Not reported';
+}
 const bblOf=f=>{const p=f?.properties||f||{};if(p.BBL==null)return '';return String(Math.trunc(Number(p.BBL))).padStart(10,'0')};
 const boroughOf=b=>({'1':'Manhattan','2':'Bronx','3':'Brooklyn','4':'Queens','5':'Staten Island'})[String(b)[0]]||'NYC';
 const apiLayer=key=>SERVICE_ROOT+URLS[key]+'/FeatureServer/0/query';
@@ -237,7 +245,8 @@ function showParcelPreview(f,latlng,{fromLookup=false}={}){
   ['Zoning',zone],
   ['Land use',LOT_USES[landuse]?landuse+' · '+LOT_USES[landuse]:'Not available'],
   ['Lot area',p.LotArea==null||p.LotArea===''?'Not available':fmt(p.LotArea)+' sq ft'],
-  ['Built FAR',p.BuiltFAR==null||p.BuiltFAR===''?'Not available':String(p.BuiltFAR)]
+  ['Built FAR',p.BuiltFAR==null||p.BuiltFAR===''?'Not available':String(p.BuiltFAR)],
+  ['Allowable FAR by use*',allowableFarSummary(p)]
  ];
  for(const [label,value] of values){
   const cell=document.createElement('div');
@@ -250,7 +259,10 @@ function showParcelPreview(f,latlng,{fromLookup=false}={}){
   map.closePopup(parcelPreview);
   inspect(f);
  });
- card.append(heading,name,number,grid,action);
+ const farNote=document.createElement('p');
+ farNote.className='parcel-preview-far-note';
+ farNote.textContent='*MapPLUTO use-specific maxima (Res = residential, Comm = commercial, CF = community facility). Not additive; zoning exceptions, MIH and split zoning may apply.';
+ card.append(heading,name,number,grid,farNote,action);
  if(parcelPreview)map.closePopup(parcelPreview);
  // Anchor at the clicked location, not at a fabricated parcel centroid.
  parcelPreview=L.popup({className:'parcel-quick-popup',maxWidth:310,minWidth:255,autoPan:true,
