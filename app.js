@@ -48,7 +48,7 @@ const fmt=v=>Number.isFinite(Number(v))&&v!==''&&v!=null?FORMAT.format(Number(v)
 const bblOf=f=>{const p=f?.properties||f||{};if(p.BBL==null)return '';return String(Math.trunc(Number(p.BBL))).padStart(10,'0')};
 const boroughOf=b=>({'1':'Manhattan','2':'Bronx','3':'Brooklyn','4':'Queens','5':'Staten Island'})[String(b)[0]]||'NYC';
 const apiLayer=key=>SERVICE_ROOT+URLS[key]+'/FeatureServer/0/query';
-let map,inspectPath,highlightRenderer;
+let map,inspectLayer;
 const layerGroups={},requests={};
 let currentParcel=null,searchTimer=null,searchSeq=0,loadTimer=null,parcelPreview=null;
 let parcelLookupSeq=0,parcelLookupController=null;
@@ -76,7 +76,7 @@ const layerStyles={
  special:()=>({color:'#544091',weight:2,fillColor:'#c8b9e8',fillOpacity:.08,dashArray:'6 4'}),
  subdistrict:()=>({color:'#8e55b1',weight:1.4,fillColor:'#d7b5e8',fillOpacity:.08,dashArray:'2 5'}),
  mih:()=>({color:'#2d997e',weight:2.2,fillColor:'#80d8ba',fillOpacity:.13,dashArray:'6 3'}),
- lots:f=>({color:LOT_OUTLINE_COLORS[lotOutlineSettings.color],weight:lotOutlineSettings.weight,opacity:(flags.lots||flags.landuse)&&lotOutlineSettings.visible?1:0,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse??'').padStart(2,'0')]||UNKNOWN_LANDUSE_COLOR):'#fff',fillOpacity:flags.landuse?layerFillOpacity.landuse:0})
+ lots:f=>({color:LOT_OUTLINE_COLORS[lotOutlineSettings.color],weight:lotOutlineSettings.weight,opacity:lotOutlineSettings.visible?1:0,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse??'').padStart(2,'0')]||UNKNOWN_LANDUSE_COLOR):'#fff',fillOpacity:flags.landuse?layerFillOpacity.landuse:0})
 };
 const titles={zoning:'Zoning district',commercial:'Commercial overlay',special:'Special district',subdistrict:'Special subdistrict',mih:'Mandatory Inclusionary Housing',lots:'Tax lot'};
 const featureLabel=(key,p)=>({
@@ -86,30 +86,19 @@ const featureLabel=(key,p)=>({
 })[key]||titles[key];
 
 function createLayers(){
- // Leaflet creates a renderer lazily for each pane. With `preferCanvas` and the
- // rotate plug-in, Safari can remove a newly-created Path before that lazy
- // renderer is attached. Keep the two noninteractive custom panes on their
- // own, already-added Canvas renderers instead.
- const makeCanvasPane=(name,zIndex)=>{
-  const pane=map.getPane(name)||map.createPane(name);
-  pane.style.zIndex=String(zIndex);pane.style.pointerEvents='none';
-  return L.canvas({pane:name,padding:.25}).addTo(map);
- };
- const spatialRenderer=makeCanvasPane('spatialAnalysisPane',425);
- highlightRenderer=makeCanvasPane('analysisHighlightPane',445);
- window.ZOLA_PANE_RENDERERS={spatialAnalysis:spatialRenderer,analysisHighlight:highlightRenderer};
  for(const key of Object.keys(URLS)){
   layerGroups[key]=L.geoJSON(null,{
    style:layerStyles[key],
    onEachFeature:(f,l)=>{
     if(key!=='lots')l.bindTooltip(safe(featureLabel(key,f.properties||{})),{sticky:!(key==='zoning'&&map.getZoom()>=15),permanent:key==='zoning'&&map.getZoom()>=15,direction:key==='zoning'?'center':'top',className:key==='zoning'?'zoning-label':'district-tip'});
-    if(key==='lots')l.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);try{showParcelPreview(f,e.latlng)}catch(error){notice('Parcel preview error: '+error.message,'error');inspect(f)}});
-    else l.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);inspectAt(e.latlng)});
+    if(key==='lots')l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);showParcelPreview(f,e.latlng)});
+    else l.on('click',e=>{L.DomEvent.stopPropagation(e.originalEvent);inspectAt(e.latlng)});
    }
   });
  }
  // Ordering matters: zoning below thematic overlays and selectable lot outlines.
  for(const key of Object.keys(URLS))layerGroups[key].addTo(map);
+ inspectLayer=L.geoJSON(null,{style:{color:'#4b277e',weight:3,fillColor:'#8b6bb7',fillOpacity:.16},interactive:false}).addTo(map);
 }
 // Update rendered feature styles in place: no network fetch, geometry replacement or click-handler change.
 window.ZOLA_SET_FILL_OPACITY=(type,percent)=>{
@@ -131,38 +120,37 @@ window.ZOLA_SET_LOT_OUTLINE=(patch={})=>{
  layerGroups.lots?.setStyle(layerStyles.lots);
  bringHighlights();
 };
-function bringHighlights(){layerGroups.lots?.bringToFront();inspectPath?.bringToFront()}
+function bringHighlights(){layerGroups.lots.bringToFront();inspectLayer.bringToFront()}
 window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS=()=>bringHighlights();
-function checkLayer(key){return key==='lots'?(flags.lots||flags.landuse||Boolean(window.ZOLA_SPATIAL_ACTIVE?.())):flags[key]}
+function checkLayer(key){return key==='lots'?(flags.lots||flags.landuse):flags[key]}
 async function refreshLayer(key){
  const group=layerGroups[key],prior=requests[key];if(prior)prior.abort();
  const ac=new AbortController();requests[key]=ac;
- if(!checkLayer(key)){group.clearLayers();if(key==='lots')window.ZOLA_SPATIAL_ON_LOTS?.([],false);signalLight(key,'Off');return}
- if(map.getZoom()<BASE[key]){group.clearLayers();if(key==='lots')window.ZOLA_SPATIAL_ON_LOTS?.([],false);signalLight(key,'Zoom in');return}
+ if(!checkLayer(key)){group.clearLayers();signalLight(key,'Off');return}
+ if(map.getZoom()<BASE[key]){group.clearLayers();signalLight(key,'Zoom in');return}
  signalLight(key,'Loading…');
- const pageSize=key==='lots'&&window.matchMedia('(max-width: 740px)').matches&&window.ZOLA_SPATIAL_ACTIVE?.()?650:2000;
- const query={...gisParams(extent(),'esriGeometryEnvelope'),outFields:FIELDS[key],resultRecordCount:pageSize,resultOffset:0};
+ const query={...gisParams(extent(),'esriGeometryEnvelope'),outFields:FIELDS[key],resultRecordCount:2000,resultOffset:0};
  const features=[];
  try{
   // Map rendering has a bounded result budget; a tighter map extent loads more.
   const pages=window.matchMedia('(max-width: 740px)').matches?1:3;
   for(let i=0;i<pages;i++){
-   query.resultOffset=i*pageSize;
+   query.resultOffset=i*2000;
    const data=await request(apiLayer(key),query,ac.signal);
    const batch=data.features||[];features.push(...batch);
-   if(batch.length<pageSize&&!data.exceededTransferLimit)break;
+   if(batch.length<2000&&!data.exceededTransferLimit)break;
   }
   if(ac.signal.aborted)return;
   const visible=features.filter(f=>!window.ZOLA_VISIBLE_FEATURE||window.ZOLA_VISIBLE_FEATURE(key,f));
   group.clearLayers();group.addData({type:'FeatureCollection',features:visible});
-  if(key==='lots'){group.setStyle(layerStyles.lots);window.ZOLA_SPATIAL_ON_LOTS?.(visible,features.length>=pages*pageSize)}
+  if(key==='lots')group.setStyle(layerStyles.lots);
   bringHighlights();
   window.ZOLA_BRING_TRANSIT_FORWARD?.();
-  const clipped=features.length>=pages*pageSize;
+  const clipped=features.length>=pages*2000;
   signalLight(key,clipped?'Zoom in for complete coverage':FORMAT.format(visible.length)+' shown',clipped?'warn':'good');
  }catch(e){
   if(e.name==='AbortError')return;
-  group.clearLayers();if(key==='lots')window.ZOLA_SPATIAL_ON_LOTS?.([],false,'Parcel data unavailable');signalLight(key,'Unavailable','error');
+  group.clearLayers();signalLight(key,'Unavailable','error');
   notice(titles[key]+' layer: '+e.message,'error');
  }
 }
@@ -223,16 +211,8 @@ function onFlagsChange(){
 // Other map layers can still request a parcel by point. Escaped text avoids HTML injection.
 function highlightParcel(f){
  currentParcel=f;
- const geometry=f?.geometry;
- const depth=geometry?.type==='Polygon'?1:geometry?.type==='MultiPolygon'?2:0;
- if(!depth||!Array.isArray(geometry.coordinates))return;
- const latlngs=L.GeoJSON.coordsToLatLngs(geometry.coordinates,depth);
- // Reuse one Path rather than clearing a GeoJSON group. This avoids
- // Path.onRemove -> this._renderer._removePath for a transient, unrendered
- // Canvas child on Safari while preserving the selected-lot outline.
- if(inspectPath)inspectPath.setLatLngs(latlngs);
- else inspectPath=L.polygon(latlngs,{pane:'analysisHighlightPane',renderer:highlightRenderer,
-  color:'#4b277e',weight:3,fillColor:'#8b6bb7',fillOpacity:.16,interactive:false}).addTo(map);
+ inspectLayer.clearLayers();
+ inspectLayer.addData(f);
  bringHighlights();
 }
 function cancelParcelLookup(){
@@ -273,14 +253,13 @@ function showParcelPreview(f,latlng,{fromLookup=false}={}){
  card.append(heading,name,number,grid,action);
  if(parcelPreview)map.closePopup(parcelPreview);
  // Anchor at the clicked location, not at a fabricated parcel centroid.
- parcelPreview=L.popup({className:'parcel-quick-popup',maxWidth:310,minWidth:255,autoPan:false,
+ parcelPreview=L.popup({className:'parcel-quick-popup',maxWidth:310,minWidth:255,autoPan:true,
   autoPanPaddingTopLeft:[18,65],autoPanPaddingBottomRight:[18,window.matchMedia('(max-width: 740px)').matches?115:25]})
   .setLatLng(latlng||L.geoJSON(f).getBounds().getCenter()).setContent(card);
  parcelPreview.openOn(map);
  notice('Parcel preview loaded. Choose View full details to open the property panel.','good');
 }
 function inspect(f){
- if(window.matchMedia('(min-width: 741px)').matches&&document.body.classList.contains('desktop-menu-hidden'))DOM('desktop-menu-toggle')?.click();
  highlightParcel(f);
  const p=f.properties||{},b=bblOf(f),zones=[p.ZoneDist1,p.ZoneDist2,p.ZoneDist3,p.ZoneDist4].filter(Boolean);
  const row=(title,value)=>'<div class="detail-row"><span>'+safe(title)+'</span><strong>'+safe(value==null||value===''?'Not available':value)+'</strong></div>';
@@ -300,20 +279,6 @@ function inspect(f){
  if(window.matchMedia('(max-width: 740px)').matches)requestAnimationFrame(()=>DOM('property-info')?.scrollIntoView({block:'start',behavior:'smooth'}));
 }
 function focusFeatures(features){if(!features.length)return;const b=L.geoJSON({type:'FeatureCollection',features}).getBounds();if(b.isValid())map.fitBounds(b.pad(.5),{maxZoom:18})}
-function parcelLookupFailure(latlng,message){
- notice(message,'error');
- if(parcelPreview)map.closePopup(parcelPreview);
- const card=document.createElement('div');
- card.className='parcel-preview-card';
- const heading=document.createElement('strong');heading.textContent='Could not load this tax lot';
- const description=document.createElement('p');description.textContent=message;
- const retry=document.createElement('button');retry.type='button';
- retry.className='parcel-preview-details';retry.textContent='Retry parcel lookup';
- retry.addEventListener('click',()=>{map.closePopup(parcelPreview);inspectAt(latlng)});
- card.append(heading,description,retry);
- parcelPreview=L.popup({className:'parcel-quick-popup',maxWidth:310,minWidth:255,autoPan:false})
-  .setLatLng(latlng).setContent(card).openOn(map);
-}
 async function inspectAt(latlng){
  const seq=++parcelLookupSeq;
  parcelLookupController?.abort();
@@ -321,23 +286,11 @@ async function inspectAt(latlng){
  notice('Looking up tax lot…');
  try{
   const geom=JSON.stringify({x:latlng.lng,y:latlng.lat,spatialReference:{wkid:4326}});
-  const data=await request(apiLayer('lots'),{
-   f:'geojson',where:'1=1',outFields:FIELDS.lots,returnGeometry:true,
-   outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',
-   spatialRel:'esriSpatialRelIntersects',resultRecordCount:5
-  },controller.signal,{priority:5,timeout:10000,cache:false});
+  const data=await request(apiLayer('lots'),{f:'geojson',where:'1=1',outFields:'*',returnGeometry:true,outSR:4326,inSR:4326,geometry:geom,geometryType:'esriGeometryPoint',spatialRel:'esriSpatialRelIntersects',resultRecordCount:10},controller.signal,{priority:2});
   if(controller.signal.aborted||seq!==parcelLookupSeq)return;
-  if(!data.features?.length){
-   notice('No mapped tax lot at this location. Zoom in and try again.','warn');
-   return;
-  }
+  if(!data.features?.length)return notice('No mapped tax lot at this location.','warn');
   showParcelPreview(data.features[0],latlng,{fromLookup:true});
- }catch(e){
-  if(controller.signal.aborted||seq!==parcelLookupSeq||e.name==='AbortError')return;
-  parcelLookupFailure(latlng,'Parcel service unavailable: '+e.message+'.');
- }finally{
-  if(parcelLookupController===controller)parcelLookupController=null;
- }
+ }catch(e){if(e.name!=='AbortError'&&seq===parcelLookupSeq)notice('Parcel lookup failed: '+e.message,'error')}
 }
 async function lookupBBL(value){
  const b=String(value).trim();
@@ -347,7 +300,7 @@ async function lookupBBL(value){
  const controller=new AbortController();parcelLookupController=controller;
  notice('Searching for BBL '+b+'…');
  try{
-  const data=await request(apiLayer('lots'),{f:'geojson',where:'BBL = '+Number(b),outFields:FIELDS.lots,returnGeometry:true,outSR:4326,resultRecordCount:5},controller.signal,{priority:5,timeout:10000,cache:false});
+  const data=await request(apiLayer('lots'),{f:'geojson',where:'BBL = '+Number(b),outFields:'*',returnGeometry:true,outSR:4326,resultRecordCount:10},controller.signal,{priority:2});
   if(controller.signal.aborted||seq!==parcelLookupSeq)return;
   if(!data.features?.length)return notice('No MapPLUTO parcel found for this BBL.','warn');
   inspect(data.features[0]);focusFeatures(data.features);notice('Found BBL '+b,'good');
@@ -572,41 +525,6 @@ function bindOrientationControls(){
  map.on('rotatestart',()=>stopCompassHeading('Manual rotation active.'));
  updateOrientationBearing();
 }
-// Desktop only: reclaim map width without unmounting the inspector or layers.
-function setupDesktopSidebar(){
- const button=DOM('desktop-menu-toggle');
- const side=DOM('mobile-sheet');
- if(!button||!side)return;
- const desktop=window.matchMedia('(min-width: 741px)');
- function setOpen(open){
-  document.body.classList.toggle('desktop-menu-hidden',!open);
-  button.setAttribute('aria-expanded',String(open));
-  button.setAttribute('aria-label',open?'Hide sidebar':'Show sidebar');
-  button.title=open?'Hide sidebar':'Show sidebar';
-  const label=button.querySelector('.desktop-menu-toggle-text');
-  if(label)label.textContent=open?'Hide menu':'Show menu';
-  const icon=button.querySelector('.desktop-menu-toggle-icon');
-  if(icon)icon.textContent=open?'›':'‹';
-  side.setAttribute('aria-hidden',String(!open&&desktop.matches));
-  if('inert' in side)side.inert=!open&&desktop.matches;
-  requestAnimationFrame(()=>map.invalidateSize({animate:false}));
-  setTimeout(()=>map.invalidateSize({animate:false}),240);
- }
- button.addEventListener('click',()=>{
-  if(!desktop.matches)return;
-  setOpen(document.body.classList.contains('desktop-menu-hidden'));
- });
- desktop.addEventListener?.('change',()=>{
-  // Mobile's independent bottom sheet must remain interactive.
-  if(!desktop.matches){
-   setOpen(true);
-   side.removeAttribute('aria-hidden');
-   if('inert' in side)side.inert=false;
-  }else{
-   setOpen(true);
-  }
- });
-}
 function bindControls(){
  DOM('locate-me').onclick=toggleLocation;
  DOM('recenter-me').onclick=()=>{if(userLocation.point)map.setView(userLocation.point,Math.max(16,map.getZoom()))};
@@ -628,7 +546,7 @@ function start(){
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();window.setupSpatialAnalysis?.(map,layerGroups);window.setupLayerExplorer?.(map);bindControls();setupDesktopSidebar();bindOrientationControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
+ createLayers();window.setupLayerExplorer?.(map);bindControls();bindOrientationControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
  map.on('moveend',refreshMap);
  map.on('click',e=>inspectAt(e.latlng));
  const url=new URL(location.href),bbl=url.searchParams.get('bbl');if(bbl)lookupBBL(bbl);
