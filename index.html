@@ -9,16 +9,17 @@
  <link rel="preconnect" href="https://services5.arcgis.com">
  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.css">
- <link rel="stylesheet" href="styles.css?v=35">
+ <link rel="stylesheet" href="styles.css?v=37">
 </head>
 <body>
 <header>
- <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 36</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
+ <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 37</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
  <div class="header-actions"><button id="info-button" title="About this independent application">About &amp; data</button></div>
 </header>
 <main class="workspace">
  <div class="map-wrap">
   <div id="map" aria-label="Interactive New York City zoning and tax lot map"></div>
+  <button id="desktop-menu-toggle" class="desktop-menu-toggle" type="button" aria-controls="mobile-sheet" aria-expanded="true" aria-label="Hide sidebar" title="Hide sidebar"><span class="desktop-menu-toggle-icon" aria-hidden="true">›</span><span class="desktop-menu-toggle-text">Hide menu</span></button>
   <div class="map-actions" role="group" aria-label="Map navigation">
    <button id="home" title="Entire NYC">All NYC</button><span class="separator"></span>
    <button id="goto-manhattan">Manhattan</button>
@@ -142,7 +143,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js"></script>
 <script defer src="gis-network.js?v=21"></script>
 <script defer src="layer-explorer.js?v=28"></script>
-<script defer src="app.js?v=36"></script>
+<script defer src="app.js?v=37"></script>
 <script defer src="spatial-analysis.js?v=36"></script>
 <script defer src="mobile.js?v=22"></script>
 </body>
