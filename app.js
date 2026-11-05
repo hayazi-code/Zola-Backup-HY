@@ -555,11 +555,12 @@ function setupDesktopSidebar(){
  desktop.addEventListener?.('change',()=>{
   // Mobile's independent bottom sheet must remain interactive.
   if(!desktop.matches){
-   document.body.classList.remove('desktop-menu-hidden');
+   setOpen(true);
    side.removeAttribute('aria-hidden');
    if('inert' in side)side.inert=false;
+  }else{
+   setOpen(true);
   }
-  requestAnimationFrame(()=>map.invalidateSize({animate:false}));
  });
 }
 function bindControls(){
