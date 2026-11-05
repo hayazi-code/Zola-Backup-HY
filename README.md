@@ -225,4 +225,8 @@ This deliberately trades maximum simultaneous coverage for mobile responsiveness
 
 Direct taps on visible MapPLUTO polygons continue to show their already-loaded quick previews without a network request. Point lookups through the map and other layers now use explicit MapPLUTO fields rather than `outFields=*`, a five-feature response limit, higher request priority, a 10-second timeout, and no stale cached parcel result. When lookup fails, a visible map popup explains the error and provides a **Retry parcel lookup** control; the main status message also explains the failure. The quick preview no longer automatically pans the map (which could trigger additional large GIS reloads). Clicking **View full details** restores the desktop right-hand menu if it is collapsed, while preserving the existing mobile sheet behavior. The tax lot and GIS overlay geometries and Spatial Analysis logic are unchanged.
 
+## Build 39: Safari Canvas parcel highlight repair
+
+The two noninteractive custom panes now receive explicit Leaflet Canvas renderers as soon as the map starts, rather than relying on Leaflet's lazy per-pane renderer creation. The inspected-lot highlight is a single reusable polygon path whose coordinates are updated for each selection; it no longer clears and recreates GeoJSON child paths. This avoids Safari's intermittent `this._renderer._removePath` failure while preserving rotation, parcel boundaries, quick previews, detail views, and the separate Spatial Analysis overlay. Updated cache versions ensure browsers load the Build 39 scripts and stylesheet.
+
 Static syntax and integration checks passed; real-world service response times and mobile-browser interaction still need live verification.

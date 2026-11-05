@@ -238,7 +238,10 @@ function onChange(){
 function setup(map,groups){
  state.map=map;
  state.lots=groups.lots;
- state.overlay=L.geoJSON(null,{pane:'spatialAnalysisPane',interactive:false,style:{color:'#99551c',weight:0,fillOpacity:.63}}).addTo(map);
+ // Use the Canvas renderer created with the pane by app.js. Explicit ownership
+ // prevents Safari from lazily detaching a custom-pane renderer while a batch
+ // of analysis paths is being cleared or replaced.
+ state.overlay=L.geoJSON(null,{pane:'spatialAnalysisPane',renderer:window.ZOLA_PANE_RENDERERS?.spatialAnalysis,interactive:false,style:{color:'#99551c',weight:0,fillOpacity:.63}}).addTo(map);
  for(const idName of ['spatial-analysis-mode','spatial-far-use','spatial-distance']){
   id(idName)?.addEventListener('change',onChange);
  }

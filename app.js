@@ -48,7 +48,7 @@ const fmt=v=>Number.isFinite(Number(v))&&v!==''&&v!=null?FORMAT.format(Number(v)
 const bblOf=f=>{const p=f?.properties||f||{};if(p.BBL==null)return '';return String(Math.trunc(Number(p.BBL))).padStart(10,'0')};
 const boroughOf=b=>({'1':'Manhattan','2':'Bronx','3':'Brooklyn','4':'Queens','5':'Staten Island'})[String(b)[0]]||'NYC';
 const apiLayer=key=>SERVICE_ROOT+URLS[key]+'/FeatureServer/0/query';
-let map,inspectLayer;
+let map,inspectPath,highlightRenderer;
 const layerGroups={},requests={};
 let currentParcel=null,searchTimer=null,searchSeq=0,loadTimer=null,parcelPreview=null;
 let parcelLookupSeq=0,parcelLookupController=null;
@@ -86,6 +86,18 @@ const featureLabel=(key,p)=>({
 })[key]||titles[key];
 
 function createLayers(){
+ // Leaflet creates a renderer lazily for each pane. With `preferCanvas` and the
+ // rotate plug-in, Safari can remove a newly-created Path before that lazy
+ // renderer is attached. Keep the two noninteractive custom panes on their
+ // own, already-added Canvas renderers instead.
+ const makeCanvasPane=(name,zIndex)=>{
+  const pane=map.getPane(name)||map.createPane(name);
+  pane.style.zIndex=String(zIndex);pane.style.pointerEvents='none';
+  return L.canvas({pane:name,padding:.25}).addTo(map);
+ };
+ const spatialRenderer=makeCanvasPane('spatialAnalysisPane',425);
+ highlightRenderer=makeCanvasPane('analysisHighlightPane',445);
+ window.ZOLA_PANE_RENDERERS={spatialAnalysis:spatialRenderer,analysisHighlight:highlightRenderer};
  for(const key of Object.keys(URLS)){
   layerGroups[key]=L.geoJSON(null,{
    style:layerStyles[key],
@@ -98,9 +110,6 @@ function createLayers(){
  }
  // Ordering matters: zoning below thematic overlays and selectable lot outlines.
  for(const key of Object.keys(URLS))layerGroups[key].addTo(map);
- map.createPane('spatialAnalysisPane');map.getPane('spatialAnalysisPane').style.zIndex='425';map.getPane('spatialAnalysisPane').style.pointerEvents='none';
- map.createPane('analysisHighlightPane');map.getPane('analysisHighlightPane').style.zIndex='445';map.getPane('analysisHighlightPane').style.pointerEvents='none';
- inspectLayer=L.geoJSON(null,{pane:'analysisHighlightPane',style:{color:'#4b277e',weight:3,fillColor:'#8b6bb7',fillOpacity:.16},interactive:false}).addTo(map);
 }
 // Update rendered feature styles in place: no network fetch, geometry replacement or click-handler change.
 window.ZOLA_SET_FILL_OPACITY=(type,percent)=>{
@@ -122,7 +131,7 @@ window.ZOLA_SET_LOT_OUTLINE=(patch={})=>{
  layerGroups.lots?.setStyle(layerStyles.lots);
  bringHighlights();
 };
-function bringHighlights(){layerGroups.lots.bringToFront();inspectLayer.bringToFront()}
+function bringHighlights(){layerGroups.lots?.bringToFront();inspectPath?.bringToFront()}
 window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS=()=>bringHighlights();
 function checkLayer(key){return key==='lots'?(flags.lots||flags.landuse||Boolean(window.ZOLA_SPATIAL_ACTIVE?.())):flags[key]}
 async function refreshLayer(key){
@@ -214,8 +223,16 @@ function onFlagsChange(){
 // Other map layers can still request a parcel by point. Escaped text avoids HTML injection.
 function highlightParcel(f){
  currentParcel=f;
- inspectLayer.clearLayers();
- inspectLayer.addData(f);
+ const geometry=f?.geometry;
+ const depth=geometry?.type==='Polygon'?1:geometry?.type==='MultiPolygon'?2:0;
+ if(!depth||!Array.isArray(geometry.coordinates))return;
+ const latlngs=L.GeoJSON.coordsToLatLngs(geometry.coordinates,depth);
+ // Reuse one Path rather than clearing a GeoJSON group. This avoids
+ // Path.onRemove -> this._renderer._removePath for a transient, unrendered
+ // Canvas child on Safari while preserving the selected-lot outline.
+ if(inspectPath)inspectPath.setLatLngs(latlngs);
+ else inspectPath=L.polygon(latlngs,{pane:'analysisHighlightPane',renderer:highlightRenderer,
+  color:'#4b277e',weight:3,fillColor:'#8b6bb7',fillOpacity:.16,interactive:false}).addTo(map);
  bringHighlights();
 }
 function cancelParcelLookup(){
