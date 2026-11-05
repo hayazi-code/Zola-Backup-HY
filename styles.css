@@ -816,3 +816,14 @@
 }
 #map .parcel-preview-grid>div:last-child{grid-column:1 / -1}
 #map .parcel-preview-grid>div:last-child dd{font-size:12px;line-height:1.5;color:#50346c}
+
+/* Build 41: clearly distinguish built, standard and conditional qualifying FAR. */
+#map .parcel-preview-grid>div:nth-child(4),
+#map .parcel-preview-grid>div:nth-child(5),
+#map .parcel-preview-grid>div:nth-child(6){background:#f8f5fb;border-radius:4px;padding:7px 8px}
+#map .parcel-preview-grid>div:nth-child(6){grid-column:1 / -1;border-left:3px solid #7051a0}
+#map .parcel-preview-grid>div:last-child{grid-column:auto}
+#map .parcel-preview-grid>div:nth-child(6) dd{color:#563287;font-weight:800}
+#map .parcel-preview-source{font-size:10px;line-height:1.4;margin:0 0 11px;color:#756b7a}
+#map .parcel-preview-source a{font-size:10px;text-decoration:underline;color:#563287}
+#map .parcel-preview-grid{gap:7px 10px}
