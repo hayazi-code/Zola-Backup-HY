@@ -162,6 +162,20 @@ async function refreshLayer(key){
   notice(titles[key]+' layer: '+e.message,'error');
  }
 }
+// Atomic reset: cancel deferred viewport refreshes and every active core GIS request
+// before synchronously removing layers. This avoids lingering geometry after a checkbox reset.
+window.ZOLA_CLEAR_CORE_LAYERS=()=>{
+ clearTimeout(loadTimer);
+ loadTimer=null;
+ for(const key of Object.keys(flags)){
+  flags[key]=false;
+  requests[key]?.abort();
+  requests[key]=null;
+  layerGroups[key]?.clearLayers();
+  signalLight(key,'Off');
+ }
+ updateMapLegend();
+};
 window.ZOLA_RELOAD_CORE=key=>{if(Object.hasOwn(URLS,key))refreshLayer(key)};
 function refreshMap(){
  clearTimeout(loadTimer);loadTimer=setTimeout(()=>{
