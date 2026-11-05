@@ -131,24 +131,25 @@ async function refreshLayer(key){
  if(!checkLayer(key)){group.clearLayers();if(key==='lots')window.ZOLA_SPATIAL_ON_LOTS?.([],false);signalLight(key,'Off');return}
  if(map.getZoom()<BASE[key]){group.clearLayers();if(key==='lots')window.ZOLA_SPATIAL_ON_LOTS?.([],false);signalLight(key,'Zoom in');return}
  signalLight(key,'Loading…');
- const query={...gisParams(extent(),'esriGeometryEnvelope'),outFields:FIELDS[key],resultRecordCount:2000,resultOffset:0};
+ const pageSize=key==='lots'&&window.matchMedia('(max-width: 740px)').matches&&window.ZOLA_SPATIAL_ACTIVE?.()?650:2000;
+ const query={...gisParams(extent(),'esriGeometryEnvelope'),outFields:FIELDS[key],resultRecordCount:pageSize,resultOffset:0};
  const features=[];
  try{
   // Map rendering has a bounded result budget; a tighter map extent loads more.
   const pages=window.matchMedia('(max-width: 740px)').matches?1:3;
   for(let i=0;i<pages;i++){
-   query.resultOffset=i*2000;
+   query.resultOffset=i*pageSize;
    const data=await request(apiLayer(key),query,ac.signal);
    const batch=data.features||[];features.push(...batch);
-   if(batch.length<2000&&!data.exceededTransferLimit)break;
+   if(batch.length<pageSize&&!data.exceededTransferLimit)break;
   }
   if(ac.signal.aborted)return;
   const visible=features.filter(f=>!window.ZOLA_VISIBLE_FEATURE||window.ZOLA_VISIBLE_FEATURE(key,f));
   group.clearLayers();group.addData({type:'FeatureCollection',features:visible});
-  if(key==='lots'){group.setStyle(layerStyles.lots);window.ZOLA_SPATIAL_ON_LOTS?.(visible,features.length>=pages*2000)}
+  if(key==='lots'){group.setStyle(layerStyles.lots);window.ZOLA_SPATIAL_ON_LOTS?.(visible,features.length>=pages*pageSize)}
   bringHighlights();
   window.ZOLA_BRING_TRANSIT_FORWARD?.();
-  const clipped=features.length>=pages*2000;
+  const clipped=features.length>=pages*pageSize;
   signalLight(key,clipped?'Zoom in for complete coverage':FORMAT.format(visible.length)+' shown',clipped?'warn':'good');
  }catch(e){
   if(e.name==='AbortError')return;
