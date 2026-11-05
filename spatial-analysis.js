@@ -79,8 +79,10 @@ async function loadEntrances(){
    return entrances;
   }finally{
    clearTimeout(timeout);
-   if(state.controller===controller)state.controller=null;
-   state.loading=null;
+   if(state.controller===controller){
+    state.controller=null;
+    state.loading=null;
+   }
   }
  })();
  return state.loading;
@@ -165,6 +167,10 @@ function stopTransitRequest(){
 function onChange(){
  const config=getConfig(),prior=state.mode;
  state.mode=config.mode;
+ if(prior==='transit'&&config.mode!=='transit'){
+  ++state.requestSequence;
+  stopTransitRequest();
+ }
  id('spatial-far-options').hidden=config.mode!=='far';
  id('spatial-transit-options').hidden=config.mode!=='transit';
  if(config.mode==='off'){
@@ -205,6 +211,12 @@ function setup(map,groups){
   id('spatial-custom-far-row').hidden=id('spatial-far-use').value!=='custom';
  });
  const source=id('spatial-mta-source');if(source)source.href=MTA_SOURCE;
+ state.map.on('movestart',()=>{
+  if(state.mode!=='off'){
+   state.overlay.clearLayers();
+   status('Updating analysis for the new map view…');
+  }
+ });
  state.map.on('zoomend',()=>{if(state.mode!=='off')render()});
  // Starting state is off and never triggers a subway service call.
  render();
