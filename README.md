@@ -193,3 +193,13 @@ The map legend now has a visible **Legend** button that toggles its content open
 ## Build 32: mobile map control layout
 
 The collapsible map legend is now anchored below the top map toolbar rather than beside the bottom geolocation controls. Expanded legend content scrolls inside a height-limited panel on narrow screens. The Locate me button is now a compact, 44 px square icon-only control, preserving its accessible text, permission flow, current-location display, Stop locating state, and separate recenter button. The map's zoning, parcel, and layer logic is unchanged.
+
+## Build 34: rotation and compass orientation
+
+Map rotation is implemented through the pinned MIT-licensed `@tomickigrzegorz/leaflet-rotate@0.3.0` Leaflet extension, loaded before the application's scripts. The Leaflet map itself rotates so that tiles, GIS feature polygons, and pointer-to-map coordinate conversion share the same rotated view. Map default remains **north-up**.
+
+Open the **🧭 orientation button** for a bearing slider, **North up** reset, and an optional **Follow compass** control. Two-finger twist gestures work on touchscreens; desktop users can right-drag or use Shift+wheel. The manual slider and reset stop heading-follow mode, and manually starting a rotation gesture also stops heading-follow mode.
+
+Compass following uses `DeviceOrientationEvent` and, when needed, Apple's `DeviceOrientationEvent.requestPermission()` in response to the user tapping the compass button. Only a north-referenced device heading is accepted (`webkitCompassHeading` on iOS, or explicitly absolute orientation values elsewhere). Arbitrary relative `alpha` values are rejected. Valid headings are rate-limited and passed to the extension's smoothed `map.setHeading()` interface. Missing permissions, unsupported sensors, and unavailable accurate readings leave manual map rotation usable. No compass or heading data is transmitted or stored by application code.
+
+**Validation limitations:** Static JavaScript parsing and integration checks do not prove rotated GIS hit-testing on real Safari devices or confirm that the pinned CDN plugin loads on the user's network. Test manually with MapPLUTO parcel clicks, zoning boundaries, polygon highlights, imagery, labels, and the GPS dot at nonzero bearings on desktop and iPhone before relying on the feature for fieldwork.
