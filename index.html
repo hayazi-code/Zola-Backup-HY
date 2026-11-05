@@ -9,11 +9,11 @@
  <link rel="preconnect" href="https://services5.arcgis.com">
  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.css">
- <link rel="stylesheet" href="styles.css?v=34">
+ <link rel="stylesheet" href="styles.css?v=35">
 </head>
 <body>
 <header>
- <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 34</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
+ <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 35</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
  <div class="header-actions"><button id="info-button" title="About this independent application">About &amp; data</button></div>
 </header>
 <main class="workspace">
@@ -80,6 +80,46 @@
      <h3>Property information</h3>
      <div id="property-info" class="detail-placeholder">Click a lot on the map, or search for an address or BBL, to see its MapPLUTO attributes and zoning context.</div>
     </section>
+    <section class="section spatial-analysis-section" aria-label="Spatial analysis">
+     <details id="spatial-analysis">
+      <summary>Spatial Analysis <span class="spatial-summary-note">FAR and subway access</span></summary>
+      <div class="spatial-controls">
+       <label for="spatial-analysis-mode">Highlight parcels by</label>
+       <select id="spatial-analysis-mode">
+        <option value="off" selected>Off</option>
+        <option value="far">Estimated FAR utilization</option>
+        <option value="transit">Distance to subway entrance</option>
+       </select>
+       <div id="spatial-far-options" hidden>
+        <label for="spatial-far-use">Allowable-use FAR reference</label>
+        <select id="spatial-far-use">
+         <option value="ResidFAR" selected>MapPLUTO residential FAR</option>
+         <option value="CommFAR">MapPLUTO commercial FAR</option>
+         <option value="FacilFAR">MapPLUTO community facility FAR</option>
+         <option value="custom">Custom assumed FAR</option>
+        </select>
+        <label id="spatial-custom-far-row" for="spatial-far-custom" hidden>Custom allowable FAR
+         <input type="number" id="spatial-far-custom" min="0.01" max="50" step="0.1" value="3">
+        </label>
+        <label class="spatial-range-label" for="spatial-far-threshold">Highlight utilization below <output id="spatial-far-threshold-value">50%</output></label>
+        <input type="range" id="spatial-far-threshold" min="5" max="100" step="5" value="50">
+        <p class="spatial-warning">Preliminary only. BuiltFAR ÷ selected FAR is not a measure of remaining buildable floor area. Split zoning, MIH, mixed uses, special districts, and other constraints can change actual entitlement.</p>
+       </div>
+       <div id="spatial-transit-options" hidden>
+        <label for="spatial-distance">Highlight parcels farther than</label>
+        <select id="spatial-distance">
+         <option value="0.25" selected>¼ mile (0.25 mi)</option>
+         <option value="0.5">½ mile (0.5 mi)</option>
+         <option value="1">1 mile</option>
+        </select>
+        <p class="spatial-warning">Straight-line distance from each parcel bounding-box center to an entry-permitted NYC subway entrance, not walking distance. Does not establish ADA accessibility, operating hours, or current entrance availability. Staten Island Railway is excluded.</p>
+        <p class="spatial-source">Source: <a id="spatial-mta-source" href="https://data.ny.gov/Transportation/MTA-Subway-Entrances-and-Exits-2024/i9wp-a4ja" target="_blank" rel="noopener">MTA Subway Entrances and Exits: 2024</a> (static dataset, not live station status).</p>
+       </div>
+       <p id="spatial-analysis-status" class="spatial-analysis-status" role="status" aria-live="polite">Analysis is off. Enable a method to highlight parcels.</p>
+       <p class="spatial-source">Only parcels loaded at zoom 16+ are evaluated, up to the MapPLUTO visible-extent limit. Missing values are excluded. This is a screening tool, not a zoning determination.</p>
+      </div>
+     </details>
+    </section>
     <section class="section catalog-section"><div id="layer-tree" aria-label="Map layer catalog"></div></section>
    </div>
    <div class="footer-note">Independent research tool. Data: <a target="_blank" rel="noopener" href="https://www.nyc.gov/content/planning/pages/resources/datasets">NYC Department of City Planning</a>. Check the <a target="_blank" rel="noopener" href="https://zr.planning.nyc.gov/">Zoning Resolution</a> for legally operative rules. <a href="diagnostics.html" target="_blank" rel="noopener">Core diagnostics</a> · <a href="layer-diagnostics.html" target="_blank" rel="noopener">Layer diagnostics</a>.</div>
@@ -102,7 +142,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js"></script>
 <script defer src="gis-network.js?v=21"></script>
 <script defer src="layer-explorer.js?v=28"></script>
-<script defer src="app.js?v=34"></script>
+<script defer src="app.js?v=35"></script>
+<script defer src="spatial-analysis.js?v=35"></script>
 <script defer src="mobile.js?v=22"></script>
 </body>
 </html>
