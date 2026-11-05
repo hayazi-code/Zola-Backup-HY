@@ -10,7 +10,7 @@ const URLS={
 const FIELDS={
   zoning:'ZONEDIST', commercial:'OVERLAY',special:'SDNAME,SDLBL',
   subdistrict:'SPNAME,SPLBL,SUBDIST,SUBSUB',mih:'*',
-  lots:'BBL,Borough,BoroCode,Block,Lot,Address,ZoneDist1,ZoneDist2,ZoneDist3,ZoneDist4,Overlay1,Overlay2,SPDist1,SPDist2,LandUse,LotArea,BldgArea,NumBldgs,NumFloors,UnitsRes,UnitsTotal,YearBuilt,YearAlter1,OwnerName,ResidFAR,CommFAR,FacilFAR,BuiltFAR,SplitZone,Version'
+  lots:'BBL,Borough,BoroCode,Block,Lot,Address,ZoneDist1,ZoneDist2,ZoneDist3,ZoneDist4,Overlay1,Overlay2,SPDist1,SPDist2,LandUse,LotArea,BldgArea,NumBldgs,NumFloors,UnitsRes,UnitsTotal,YearBuilt,YearAlter1,OwnerName,ResidFAR,AffResFAR,CommFAR,FacilFAR,BuiltFAR,SplitZone,Version'
 };
 const BASE={zoning:13,commercial:14,special:12,subdistrict:14,mih:12,lots:16};
 const LOT_USES={
@@ -245,8 +245,11 @@ function showParcelPreview(f,latlng,{fromLookup=false}={}){
   ['Zoning',zone],
   ['Land use',LOT_USES[landuse]?landuse+' · '+LOT_USES[landuse]:'Not available'],
   ['Lot area',p.LotArea==null||p.LotArea===''?'Not available':fmt(p.LotArea)+' sq ft'],
-  ['Built FAR',p.BuiltFAR==null||p.BuiltFAR===''?'Not available':String(p.BuiltFAR)],
-  ['Allowable FAR by use*',allowableFarSummary(p)]
+  ['Built FAR',p.BuiltFAR==null||p.BuiltFAR===''?'Not reported':String(p.BuiltFAR)],
+  ['Standard residential FAR',farDisplay(p.ResidFAR)||'Not reported'],
+  ['Qualifying affordable FAR*',farDisplay(p.AffResFAR)||'Not reported'],
+  ['Commercial FAR',farDisplay(p.CommFAR)||'Not reported'],
+  ['Community facility FAR',farDisplay(p.FacilFAR)||'Not reported']
  ];
  for(const [label,value] of values){
   const cell=document.createElement('div');
@@ -261,8 +264,13 @@ function showParcelPreview(f,latlng,{fromLookup=false}={}){
  });
  const farNote=document.createElement('p');
  farNote.className='parcel-preview-far-note';
- farNote.textContent='*MapPLUTO use-specific maxima (Res = residential, Comm = commercial, CF = community facility). Not additive; zoning exceptions, MIH and split zoning may apply.';
- card.append(heading,name,number,grid,farNote,action);
+ farNote.textContent='*Qualifying affordable FAR is a potential zoning maximum, not a determination that this lot or proposed development qualifies. Values are use-specific, not additive. Existing Built FAR is an estimate and cannot simply be subtracted to establish unused development rights. MIH, split zoning, special rules and other restrictions may apply.';
+ const source=document.createElement('p');source.className='parcel-preview-source';
+ source.append(document.createTextNode('Sources: '));
+ const dictionary=document.createElement('a');dictionary.href='https://s-media.nyc.gov/agencies/dcp/assets/files/pdf/data-tools/bytes/pluto_datadictionary.pdf';dictionary.textContent='DCP PLUTO dictionary';dictionary.target='_blank';dictionary.rel='noopener noreferrer';
+ const zoning=document.createElement('a');zoning.href='https://zoningresolution.planning.nyc.gov/article-ii/chapter-3';zoning.textContent='NYC Zoning Resolution';zoning.target='_blank';zoning.rel='noopener noreferrer';
+ source.append(dictionary,document.createTextNode(' · '),zoning);
+ card.append(heading,name,number,grid,farNote,source,action);
  if(parcelPreview)map.closePopup(parcelPreview);
  // Anchor at the clicked location, not at a fabricated parcel centroid.
  parcelPreview=L.popup({className:'parcel-quick-popup',maxWidth:310,minWidth:255,autoPan:true,
@@ -280,8 +288,8 @@ function inspect(f){
  if(p.Overlay1)html+='<span class="chip overlay">'+safe(p.Overlay1)+'</span>';html+='</div>';
  html+='<h4>Zoning and land use</h4>'+row('Zoning districts',zones.join(', '))+row('Commercial overlays',[p.Overlay1,p.Overlay2].filter(Boolean).join(', '))+row('Special districts',[p.SPDist1,p.SPDist2].filter(Boolean).join(', '))+row('Split zoning',p.SplitZone==='Y'?'Yes':p.SplitZone==='N'?'No':p.SplitZone)+row('Land use',LOT_USES[String(p.LandUse||'').padStart(2,'0')]||p.LandUse);
  html+='<h4>Tax lot and buildings</h4>'+row('BBL',b)+row('Block / lot',p.Block+' / '+p.Lot)+row('Lot area (sq ft)',fmt(p.LotArea))+row('Building area (sq ft)',fmt(p.BldgArea))+row('Buildings',fmt(p.NumBldgs))+row('Floors',p.NumFloors)+row('Residential units',fmt(p.UnitsRes))+row('Total units',fmt(p.UnitsTotal))+row('Year built',p.YearBuilt);
- html+='<h4>Reported FAR values (MapPLUTO)</h4>'+row('Built FAR',p.BuiltFAR)+row('Residential FAR',p.ResidFAR)+row('Commercial FAR',p.CommFAR)+row('Community facility FAR',p.FacilFAR);
- html+='<p class="small-note">FAR fields are MapPLUTO attributes, not a definitive zoning entitlement. Verify district rules and special conditions.</p>';
+ html+='<h4>Reported FAR values (MapPLUTO)</h4>'+row('Built FAR',p.BuiltFAR)+row('Standard residential FAR',farDisplay(p.ResidFAR)||'Not reported')+row('Qualifying affordable residential FAR (conditional)',farDisplay(p.AffResFAR)||'Not reported')+row('Commercial FAR',p.CommFAR)+row('Community facility FAR',p.FacilFAR);
+ html+='<p class="small-note">Qualifying affordable residential FAR is conditional and does not establish a site-specific entitlement. Existing Built FAR is an estimate, not zoning floor area. The FAR values are not additive. Verify eligibility and special conditions.</p>';
  html+='<div class="action-row"><button id="property-zoom">Zoom to lot</button><button id="property-share">Share</button></div>';
  html+='<p class="source-line">MapPLUTO version: '+safe(p.Version||'unspecified')+' · <a target="_blank" rel="noopener" href="https://zola.planning.nyc.gov/bbl/'+encodeURIComponent(b)+'">Official ZoLa</a></p>';
  DOM('property-info').innerHTML=html;
