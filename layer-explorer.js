@@ -241,17 +241,37 @@ function renderItem(item,depth,top){
   wrapper.append(controls);
  }
  if(item.note){row.title=item.note;title.title=item.note}
- checkbox.onchange=()=>{
-  if(item.children?.length)for(const child of descendants(item)){const check=el('sub-'+child.id);if(check&&!check.disabled)check.checked=checkbox.checked}
-  if(depth===0){if(item.core){ /* app.js binds the core change callback */ }
-   else if(item.available!==false){checkbox.checked?activate(item):deactivate(item)}}
-  else{
-   if(item.source&&item.available!==false){checkbox.checked?activate(item):deactivate(item)}
-   if(top.id==='zoning')syncZoningChildren();
-   updateParentCheckState(top);if(top.core)window.ZOLA_RELOAD_CORE?.(top.core);
+ checkbox.addEventListener('change',()=>{
+  if(item.children?.length){
+   // After Deselect all, a parent must restore its descendants when enabled.
+   for(const child of descendants(item)){
+    const check=el('sub-'+child.id);
+    if(check&&!check.disabled){
+     check.checked=checkbox.checked;
+     check.indeterminate=false;
+     // Nested independently sourced layers must follow their parent, too.
+     if(child.source&&child.available!==false&&!child.core){
+      checkbox.checked?activate(child):deactivate(child);
+     }
+    }
+   }
+  }
+  if(depth===0){
+   if(!item.core&&item.available!==false){
+    checkbox.checked?activate(item):deactivate(item);
+   }
+  }else{
+   if(item.source&&item.available!==false){
+    checkbox.checked?activate(item):deactivate(item);
+   }
+   updateParentCheckState(top);
+   // Parent state may have changed when the last subtype was disabled.
+   // Synchronize actual rendering flags, not just the parent checkbox.
+   if(top.core)window.ZOLA_SYNC_CORE_FLAGS?.();
    else if(top.available!==false&&state.active.has(top.id))load(top);
   }
- };
+  if(top.id==='zoning')syncZoningChildren();
+ });
  let children;
  if(item.children?.length){
   children=document.createElement('div');children.className='catalog-children';
