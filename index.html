@@ -8,11 +8,12 @@
  <title>ZoLa Backup HY | NYC Zoning &amp; Land Use</title>
  <link rel="preconnect" href="https://services5.arcgis.com">
  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
- <link rel="stylesheet" href="styles.css?v=33">
+ <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.css">
+ <link rel="stylesheet" href="styles.css?v=34">
 </head>
 <body>
 <header>
- <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 33</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
+ <div class="brand"><strong>ZoLa</strong><span id="build-badge" class="build-badge" title="Version of the application currently loaded in your browser">BUILD 34</span><small>NYC Zoning &amp; Land Use Explorer · Independent backup</small></div>
  <div class="header-actions"><button id="info-button" title="About this independent application">About &amp; data</button></div>
 </header>
 <main class="workspace">
@@ -25,6 +26,19 @@
    <button id="goto-brooklyn">Brooklyn</button>
    <button id="goto-queens">Queens</button>
    <button id="goto-staten">Staten Island</button>
+  </div>
+  <div class="orientation-tools" role="group" aria-label="Map orientation controls">
+   <button id="orientation-toggle" type="button" aria-expanded="false" aria-controls="orientation-panel" aria-label="Map orientation options" title="Map orientation"><span aria-hidden="true">🧭</span></button>
+   <div id="orientation-panel" class="orientation-panel" hidden>
+    <div class="orientation-heading"><strong>Map orientation</strong><output id="orientation-bearing" for="orientation-angle">0°</output></div>
+    <label for="orientation-angle">Rotate manually</label>
+    <input id="orientation-angle" type="range" min="0" max="359" step="1" value="0">
+    <div class="orientation-actions">
+     <button id="orientation-north" type="button">↑ North up</button>
+     <button id="orientation-heading-toggle" type="button" aria-pressed="false">Follow compass</button>
+    </div>
+    <p id="orientation-message" role="status" aria-live="polite">Rotate with two fingers, or use the slider.</p>
+   </div>
   </div>
   <div class="geolocation-tools" role="group" aria-label="Your location on map">
    <button id="locate-me" type="button" aria-label="Show my current location on the map" aria-pressed="false" title="Show my location (requires permission)"><span class="locate-glyph" aria-hidden="true">◎</span><span id="locate-me-label" class="visually-hidden">Locate me</span></button>
@@ -85,9 +99,10 @@
  <div style="text-align:right;margin-top:20px"><button id="about-close" class="primary">Close</button></div>
 </dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js"></script>
 <script defer src="gis-network.js?v=21"></script>
 <script defer src="layer-explorer.js?v=28"></script>
-<script defer src="app.js?v=31"></script>
+<script defer src="app.js?v=34"></script>
 <script defer src="mobile.js?v=22"></script>
 </body>
 </html>
