@@ -5,10 +5,14 @@
 const MTA_URL='https://data.ny.gov/resource/i9wp-a4ja.json';
 const MTA_SOURCE='https://data.ny.gov/Transportation/MTA-Subway-Entrances-and-Exits-2024/i9wp-a4ja';
 const MILES_TO_METERS=1609.344;
-const MAX_RENDER=1600;
+const MOBILE_MAX_RENDER=180;
+const DESKTOP_MAX_RENDER=650;
+const BATCH_SIZE=24;
+const mobile=()=>window.matchMedia('(max-width: 740px)').matches;
+const renderLimit=()=>mobile()?MOBILE_MAX_RENDER:DESKTOP_MAX_RENDER;
 const MAX_ENTRANCES=5000;
 const id=name=>document.getElementById(name);
-const state={map:null,lots:null,overlay:null,mode:'off',features:[],clipped:false,entrances:null,loading:null,controller:null,loadError:'',requestSequence:0};
+const state={map:null,lots:null,overlay:null,mode:'off',features:[],clipped:false,entrances:null,loading:null,controller:null,loadError:'',requestSequence:0,renderSequence:0,renderTimer:null,debounceTimer:null};
 function status(text,kind='info'){
  const out=id('spatial-analysis-status');
  if(!out)return;
@@ -125,8 +129,24 @@ function transitResults(features,config,entrances){
  }
  return {matches,missing,examined,candidates:candidates.length};
 }
+// Invalidate queued drawing immediately on any subsequent change or viewport update.
+function cancelRender(){
+ ++state.renderSequence;
+ if(state.renderTimer!==null){clearTimeout(state.renderTimer);state.renderTimer=null}
+ if(state.debounceTimer!==null){clearTimeout(state.debounceTimer);state.debounceTimer=null}
+}
+function scheduleRender(delay=120){
+ cancelRender();
+ const seq=state.renderSequence;
+ state.debounceTimer=setTimeout(()=>{
+  state.debounceTimer=null;
+  if(seq===state.renderSequence)render();
+ },delay);
+}
 function render(){
  if(!state.overlay)return;
+ cancelRender();
+ const seq=state.renderSequence;
  state.overlay.clearLayers();
  const config=getConfig();
  if(config.mode==='off'){status('Analysis is off. Enable a method to highlight parcels.');return}
@@ -145,20 +165,40 @@ function render(){
  }
  const result=config.mode==='far'?farResults(state.features,config):
   transitResults(state.features,config,state.entrances);
- const highlighted=result.matches.slice(0,MAX_RENDER);
- state.overlay.addData({type:'FeatureCollection',features:highlighted});
- state.overlay.setStyle({color:'#99551c',weight:0,opacity:0,fillColor:config.mode==='far'?'#ed9b35':'#d95b66',fillOpacity:.63});
- state.overlay.bringToFront();
+ const limit=renderLimit();
+ const highlighted=result.matches.slice(0,limit);
  const count=result.matches.length;
  const label=config.mode==='far'?'below '+config.threshold+'% of selected use FAR':
   'farther than '+config.distance+' mile'+(config.distance===1?'':'s')+' from a subway entrance';
  const notes=[count+' of '+result.examined+' evaluated parcels '+label+'.'];
  if(result.missing)notes.push(result.missing+' missing or invalid values skipped.');
- if(count>MAX_RENDER)notes.push('Only the first '+MAX_RENDER+' matches are drawn for performance.');
+ if(count>limit)notes.push('Showing '+highlighted.length+' of '+count+' matches to protect '+(mobile()?'mobile':'map')+' performance. Zoom in to see more.');
  if(state.clipped)notes.push('MapPLUTO extent results were capped; zoom in for fuller coverage.');
  notes.push('Visible area only.');
- status(notes.join(' '),'good');
- window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS?.();
+ if(!highlighted.length){status(notes.join(' '),'good');return}
+ status('Drawing '+highlighted.length+' of '+count+' matching parcels…');
+ const style={color:'#99551c',weight:0,opacity:0,fillColor:config.mode==='far'?'#ed9b35':'#d95b66',fillOpacity:.63};
+ // Batch geometry creation with a yield between slices, keeping scrolling and panning responsive.
+ let offset=0;
+ function nextBatch(){
+  if(seq!==state.renderSequence||state.mode!==config.mode)return;
+  const end=Math.min(offset+BATCH_SIZE,highlighted.length);
+  const fragment={type:'FeatureCollection',features:highlighted.slice(offset,end)};
+  state.overlay.addData(fragment);
+  offset=end;
+  if(offset<highlighted.length){
+   state.renderTimer=setTimeout(nextBatch,16);
+  }else{
+   state.renderTimer=null;
+   state.overlay.setStyle(style);
+   // Maintain selected parcel's purple border above analysis highlights.
+   window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS?.();
+   status(notes.join(' '),'good');
+  }
+ }
+ // Apply the correct style before any geometry is added, rather than restyling all features.
+ state.overlay.options.style=style;
+ state.renderTimer=setTimeout(nextBatch,0);
 }
 function stopTransitRequest(){
  if(state.controller){state.controller.abort();state.controller=null}
@@ -175,7 +215,7 @@ function onChange(){
  id('spatial-transit-options').hidden=config.mode!=='transit';
  if(config.mode==='off'){
   stopTransitRequest();
-  state.overlay?.clearLayers();
+  cancelRender();state.overlay?.clearLayers();
   status('Analysis off. Choose a method to highlight parcels.');
   if(prior!=='off')window.ZOLA_RELOAD_CORE?.('lots');
   return;
@@ -185,15 +225,15 @@ function onChange(){
   const seq=++state.requestSequence;
   status('Retrieving official MTA subway entrance coordinates…');
   loadEntrances().then(()=>{
-   if(seq===state.requestSequence&&getConfig().mode==='transit')render();
+   if(seq===state.requestSequence&&getConfig().mode==='transit')scheduleRender(80);
   }).catch(e=>{
    if(seq!==state.requestSequence)return;
    state.loadError=e.name==='AbortError'?'Request canceled':e.message;
-   if(getConfig().mode==='transit')render();
+   if(getConfig().mode==='transit')scheduleRender(80);
   });
  }
  if(prior==='off')window.ZOLA_RELOAD_CORE?.('lots');
- render();
+ scheduleRender(90);
 }
 function setup(map,groups){
  state.map=map;
@@ -204,20 +244,21 @@ function setup(map,groups){
  }
  id('spatial-far-threshold')?.addEventListener('input',()=>{
   id('spatial-far-threshold-value').textContent=id('spatial-far-threshold').value+'%';
-  render();
+  scheduleRender(180);
  });
- id('spatial-far-custom')?.addEventListener('input',render);
+ id('spatial-far-custom')?.addEventListener('input',()=>scheduleRender(240));
  id('spatial-far-use')?.addEventListener('change',()=>{
   id('spatial-custom-far-row').hidden=id('spatial-far-use').value!=='custom';
  });
  const source=id('spatial-mta-source');if(source)source.href=MTA_SOURCE;
  state.map.on('movestart',()=>{
   if(state.mode!=='off'){
-   state.overlay.clearLayers();
+   cancelRender();state.overlay.clearLayers();
    status('Updating analysis for the new map view…');
   }
  });
- state.map.on('zoomend',()=>{if(state.mode!=='off')render()});
+ // Map movement triggers a fresh MapPLUTO download; do not redraw stale polygons on zoomend.
+ state.map.on('zoomend',()=>{if(state.mode!=='off')status('Updating analysis for the new map view…')});
  // Starting state is off and never triggers a subway service call.
  render();
 }
@@ -227,7 +268,7 @@ window.ZOLA_SPATIAL_ON_LOTS=(features,clipped,error)=>{
  state.features=features||[];
  state.clipped=Boolean(clipped);
  if(error){state.overlay?.clearLayers();status(error,'error');return}
- render();
+ scheduleRender(40);
 };
 window.ZOLA_SPATIAL_TEST={representativePoint,metersBetween,farResults,makeEligibleEntrances,transitResults};
 })();
