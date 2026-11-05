@@ -528,6 +528,40 @@ function bindOrientationControls(){
  map.on('rotatestart',()=>stopCompassHeading('Manual rotation active.'));
  updateOrientationBearing();
 }
+// Desktop only: reclaim map width without unmounting the inspector or layers.
+function setupDesktopSidebar(){
+ const button=DOM('desktop-menu-toggle');
+ const side=DOM('mobile-sheet');
+ if(!button||!side)return;
+ const desktop=window.matchMedia('(min-width: 741px)');
+ function setOpen(open){
+  document.body.classList.toggle('desktop-menu-hidden',!open);
+  button.setAttribute('aria-expanded',String(open));
+  button.setAttribute('aria-label',open?'Hide sidebar':'Show sidebar');
+  button.title=open?'Hide sidebar':'Show sidebar';
+  const label=button.querySelector('.desktop-menu-toggle-text');
+  if(label)label.textContent=open?'Hide menu':'Show menu';
+  const icon=button.querySelector('.desktop-menu-toggle-icon');
+  if(icon)icon.textContent=open?'›':'‹';
+  side.setAttribute('aria-hidden',String(!open&&desktop.matches));
+  if('inert' in side)side.inert=!open&&desktop.matches;
+  requestAnimationFrame(()=>map.invalidateSize({animate:false}));
+  setTimeout(()=>map.invalidateSize({animate:false}),240);
+ }
+ button.addEventListener('click',()=>{
+  if(!desktop.matches)return;
+  setOpen(document.body.classList.contains('desktop-menu-hidden'));
+ });
+ desktop.addEventListener?.('change',()=>{
+  // Mobile's independent bottom sheet must remain interactive.
+  if(!desktop.matches){
+   document.body.classList.remove('desktop-menu-hidden');
+   side.removeAttribute('aria-hidden');
+   if('inert' in side)side.inert=false;
+  }
+  requestAnimationFrame(()=>map.invalidateSize({animate:false}));
+ });
+}
 function bindControls(){
  DOM('locate-me').onclick=toggleLocation;
  DOM('recenter-me').onclick=()=>{if(userLocation.point)map.setView(userLocation.point,Math.max(16,map.getZoom()))};
@@ -549,7 +583,7 @@ function start(){
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();window.setupSpatialAnalysis?.(map,layerGroups);window.setupLayerExplorer?.(map);bindControls();bindOrientationControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
+ createLayers();window.setupSpatialAnalysis?.(map,layerGroups);window.setupLayerExplorer?.(map);bindControls();setupDesktopSidebar();bindOrientationControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
  map.on('moveend',refreshMap);
  map.on('click',e=>inspectAt(e.latlng));
  const url=new URL(location.href),bbl=url.searchParams.get('bbl');if(bbl)lookupBBL(bbl);
