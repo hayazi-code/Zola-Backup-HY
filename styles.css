@@ -807,3 +807,12 @@
  .orientation-panel{max-height:min(42dvh,270px);overflow-y:auto}
  body.mobile-sheet-expanded .orientation-tools{display:none}
 }
+
+/* Build 40: concise, readable FAR caveat within parcel quick previews. */
+#map .parcel-preview-far-note{
+ font-size:10px;line-height:1.45;color:#746979;
+ padding:8px 9px;background:#f8f5fb;border-radius:4px;
+ border-left:2px solid #9b82b6;margin:0 0 10px;
+}
+#map .parcel-preview-grid>div:last-child{grid-column:1 / -1}
+#map .parcel-preview-grid>div:last-child dd{font-size:12px;line-height:1.5;color:#50346c}
