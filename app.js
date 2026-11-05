@@ -267,7 +267,7 @@ function showParcelPreview(f,latlng,{fromLookup=false}={}){
  farNote.textContent='*Qualifying affordable FAR is a potential zoning maximum, not a determination that this lot or proposed development qualifies. Values are use-specific, not additive. Existing Built FAR is an estimate and cannot simply be subtracted to establish unused development rights. MIH, split zoning, special rules and other restrictions may apply.';
  const source=document.createElement('p');source.className='parcel-preview-source';
  source.append(document.createTextNode('Sources: '));
- const dictionary=document.createElement('a');dictionary.href='https://s-media.nyc.gov/agencies/dcp/assets/files/pdf/data-tools/bytes/pluto_datadictionary.pdf';dictionary.textContent='DCP PLUTO dictionary';dictionary.target='_blank';dictionary.rel='noopener noreferrer';
+ const dictionary=document.createElement('a');dictionary.href='https://s-media.nyc.gov/agencies/dcp/assets/files/pdf/data-tools/bytes/meta_mappluto_unclipped.pdf';dictionary.textContent='DCP MapPLUTO metadata';dictionary.target='_blank';dictionary.rel='noopener noreferrer';
  const zoning=document.createElement('a');zoning.href='https://zoningresolution.planning.nyc.gov/article-ii/chapter-3';zoning.textContent='NYC Zoning Resolution';zoning.target='_blank';zoning.rel='noopener noreferrer';
  source.append(dictionary,document.createTextNode(' · '),zoning);
  card.append(heading,name,number,grid,farNote,source,action);
