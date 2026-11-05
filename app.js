@@ -546,31 +546,6 @@ function bindOrientationControls(){
  map.on('rotatestart',()=>stopCompassHeading('Manual rotation active.'));
  updateOrientationBearing();
 }
-// Desktop-only menu toggle. Keep sidebar DOM and its inputs mounted while hidden.
-function setupDesktopMenu(){
- const button=DOM('desktop-menu-toggle'),sidebar=DOM('mobile-sheet');
- if(!button||!sidebar)return;
- const desktop=window.matchMedia('(min-width: 741px)');
- let isOpen=true;
- function update(open){
-  isOpen=Boolean(open);
-  document.body.classList.toggle('desktop-menu-hidden',desktop.matches&&!isOpen);
-  button.setAttribute('aria-expanded',String(isOpen));
-  button.setAttribute('aria-label',isOpen?'Hide sidebar':'Show sidebar');
-  button.title=isOpen?'Hide sidebar':'Show sidebar';
-  DOM('desktop-menu-label').textContent=isOpen?'Hide menu':'Show menu';
-  DOM('desktop-menu-icon').textContent=isOpen?'❯':'❮';
-  sidebar.removeAttribute('aria-hidden');
-  if('inert' in sidebar)sidebar.inert=desktop.matches&&!isOpen;
-  if(desktop.matches&&!isOpen)sidebar.setAttribute('aria-hidden','true');
-  requestAnimationFrame(()=>map.invalidateSize({animate:false}));
-  setTimeout(()=>map.invalidateSize({animate:false}),80);
- }
- button.addEventListener('click',()=>{if(desktop.matches)update(!isOpen)});
- desktop.addEventListener?.('change',()=>update(true));
- window.ZOLA_SHOW_DESKTOP_MENU=()=>{if(desktop.matches&&!isOpen)update(true)};
- update(true);
-}
 function bindControls(){
  DOM('locate-me').onclick=toggleLocation;
  DOM('recenter-me').onclick=()=>{if(userLocation.point)map.setView(userLocation.point,Math.max(16,map.getZoom()))};
@@ -592,7 +567,7 @@ function start(){
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();window.setupLayerExplorer?.(map);bindControls();setupDesktopMenu();bindOrientationControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
+ createLayers();window.setupLayerExplorer?.(map);bindControls();bindOrientationControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
  map.on('moveend',refreshMap);
  map.on('click',e=>inspectAt(e.latlng));
  const url=new URL(location.href),bbl=url.searchParams.get('bbl');if(bbl)lookupBBL(bbl);
