@@ -427,6 +427,104 @@ function toggleLocation(){
   stopLocation();notice('Could not start location tracking: '+e.message,'error');
  }
 }
+// Build 34: rotate the Leaflet map itself, so GeoJSON parcel geometry and click hit-testing
+// share the same coordinate transform as tiles and labels. No DOM-only map transforms.
+const orientationState={heading:false,lastHeading:null,lastSensorAt:0,previousAt:0,sensorTimer:null};
+const normalizeBearing=n=>(Math.round(n)%360+360)%360;
+function setOrientationMessage(message){const n=DOM('orientation-message');if(n)n.textContent=message}
+function updateOrientationBearing(){
+ const angle=typeof map.getBearing==='function'?normalizeBearing(map.getBearing()):0;
+ const output=DOM('orientation-bearing'),slider=DOM('orientation-angle');
+ if(output)output.textContent=angle+'°';
+ if(slider&&document.activeElement!==slider)slider.value=String(angle);
+}
+function stopCompassHeading(message){
+ if(!orientationState.heading)return;
+ orientationState.heading=false;
+ window.removeEventListener('deviceorientation',onCompassOrientation);
+ window.removeEventListener('deviceorientationabsolute',onCompassOrientation);
+ if(orientationState.sensorTimer){clearTimeout(orientationState.sensorTimer);orientationState.sensorTimer=null}
+ map.stopHeadingUp?.();
+ const b=DOM('orientation-heading-toggle');
+ if(b){b.setAttribute('aria-pressed','false');b.textContent='Follow compass'}
+ if(message)setOrientationMessage(message);
+}
+function onCompassOrientation(event){
+ if(!orientationState.heading)return;
+ // iOS webkitCompassHeading is a north-referenced bearing. Non-absolute
+ // alpha values have an arbitrary origin and must not be mistaken for true north.
+ let heading=null;
+ if(Number.isFinite(event.webkitCompassHeading)){
+  if(Number.isFinite(event.webkitCompassAccuracy)&&event.webkitCompassAccuracy<0)return;
+  heading=event.webkitCompassHeading;
+ }else if(event.absolute===true&&Number.isFinite(event.alpha)){
+  // Absolute alpha is counterclockwise from North; compensate for screen rotation.
+  const screenAngle=Number(screen.orientation?.angle)||0;
+  heading=(360-event.alpha+screenAngle)%360;
+ }
+ if(heading===null)return;
+ const now=Date.now();
+ if(now-orientationState.previousAt<80)return; // cap updates to limit GIS redraw work
+ orientationState.previousAt=now;
+ orientationState.lastSensorAt=now;
+ orientationState.lastHeading=normalizeBearing(heading);
+ map.setHeading?.(orientationState.lastHeading,{ease:0.12,deadzone:1.5});
+ setOrientationMessage('Following compass · '+orientationState.lastHeading+'° · tap North up to stop');
+}
+async function toggleCompassHeading(){
+ if(orientationState.heading){stopCompassHeading('Compass stopped. Rotate manually with two fingers or slider.');return}
+ if(typeof map.setHeading!=='function'){setOrientationMessage('Rotation extension unavailable; compass mode cannot start.');return}
+ if(!window.isSecureContext||typeof window.DeviceOrientationEvent==='undefined'){
+  setOrientationMessage('Device orientation requires HTTPS and a supported motion sensor. Manual rotation remains available.');return;
+ }
+ // iPhone Safari only permits requestPermission in direct response to a user tap.
+ const EventType=window.DeviceOrientationEvent;
+ if(typeof EventType.requestPermission==='function'){
+  try{
+   const permission=await EventType.requestPermission();
+   if(permission!=='granted'){setOrientationMessage('Compass permission denied. You can still rotate manually.');return}
+  }catch(err){setOrientationMessage('Compass access was blocked. Check Safari motion permissions or rotate manually.');return}
+ }
+ orientationState.heading=true;orientationState.previousAt=0;orientationState.lastSensorAt=0;
+ const b=DOM('orientation-heading-toggle');
+ if(b){b.setAttribute('aria-pressed','true');b.textContent='Stop compass'}
+ // Listen to both, but throttle duplicate events and refuse non-absolute headings.
+ window.addEventListener('deviceorientation',onCompassOrientation);
+ window.addEventListener('deviceorientationabsolute',onCompassOrientation);
+ setOrientationMessage('Waiting for an accurate compass heading…');
+ orientationState.sensorTimer=setTimeout(()=>{
+  if(orientationState.heading&&!orientationState.lastSensorAt){
+   stopCompassHeading('No north-referenced compass readings available. Use manual rotation.');
+  }
+ },6500);
+}
+function bindOrientationControls(){
+ const trigger=DOM('orientation-toggle'),panel=DOM('orientation-panel');
+ if(!trigger||!panel)return;
+ const supported=typeof map.setBearing==='function'&&typeof map.getBearing==='function';
+ if(!supported){
+  trigger.disabled=true;trigger.title='Map rotation could not load';
+  return;
+ }
+ trigger.onclick=()=>{
+  panel.hidden=!panel.hidden;
+  trigger.setAttribute('aria-expanded',String(!panel.hidden));
+ };
+ DOM('orientation-angle').addEventListener('input',e=>{
+  stopCompassHeading('Manual rotation active.');
+  map.setBearing(Number(e.target.value));
+  updateOrientationBearing();
+ });
+ DOM('orientation-north').onclick=()=>{
+  stopCompassHeading('North is up.');
+  map.setBearing(0);
+  updateOrientationBearing();
+ };
+ DOM('orientation-heading-toggle').onclick=toggleCompassHeading;
+ map.on('rotate',updateOrientationBearing);
+ map.on('rotatestart',()=>stopCompassHeading('Manual rotation active.'));
+ updateOrientationBearing();
+}
 function bindControls(){
  DOM('locate-me').onclick=toggleLocation;
  DOM('recenter-me').onclick=()=>{if(userLocation.point)map.setView(userLocation.point,Math.max(16,map.getZoom()))};
@@ -442,13 +540,13 @@ function bindControls(){
  DOM('about-close').onclick=()=>DOM('about-modal').close();
 }
 function start(){
- map=L.map('map',{zoomControl:false,preferCanvas:true}).setView([40.674,-73.955],14);
+ map=L.map('map',{zoomControl:false,preferCanvas:true,rotate:true,touchRotate:true,dragRotate:true,shiftKeyRotate:true,rotateControl:false,bearing:0}).setView([40.674,-73.955],14);
  L.control.zoom({position:'topleft'}).addTo(map);
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();window.setupLayerExplorer?.(map);bindControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
+ createLayers();window.setupLayerExplorer?.(map);bindControls();bindOrientationControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
  map.on('moveend',refreshMap);
  map.on('click',e=>inspectAt(e.latlng));
  const url=new URL(location.href),bbl=url.searchParams.get('bbl');if(bbl)lookupBBL(bbl);
