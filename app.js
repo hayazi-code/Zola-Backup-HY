@@ -224,11 +224,21 @@ function onFlagsChange(){
  for(const key of Object.keys(flags)){
   const ch=DOM('layer-'+key);if(ch)flags[key]=ch.checked;
  }
+ // Hide disabled layers immediately; only enabled layers need network refresh.
+ for(const key of Object.keys(URLS)){
+  if(!checkLayer(key)){
+   requests[key]?.abort();
+   requests[key]=null;
+   layerGroups[key]?.clearLayers();
+   signalLight(key,'Off');
+  }
+ }
  layerGroups.lots.setStyle(layerStyles.lots);
  window.ZOLA_SYNC_CHILDREN?.();
  updateMapLegend();
  refreshMap();
 }
+window.ZOLA_SYNC_CORE_FLAGS=onFlagsChange;
 // A lightweight map preview uses the already-loaded MapPLUTO feature for direct parcel clicks.
 // Other map layers can still request a parcel by point. Escaped text avoids HTML injection.
 function highlightParcel(f){
@@ -563,7 +573,7 @@ function bindOrientationControls(){
 function bindControls(){
  DOM('locate-me').onclick=toggleLocation;
  DOM('recenter-me').onclick=()=>{if(userLocation.point)map.setView(userLocation.point,Math.max(16,map.getZoom()))};
- for(const key of Object.keys(flags)){const input=DOM('layer-'+key);if(input)input.onchange=onFlagsChange}
+ for(const key of Object.keys(flags)){const input=DOM('layer-'+key);if(input)input.addEventListener('change',onFlagsChange)}
  DOM('search-button').onclick=runSearch;DOM('search').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}if(e.key==='Escape')DOM('suggestions').hidden=true};
  DOM('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(autocomplete,350)};
  DOM('home').onclick=()=>map.fitBounds([[40.49,-74.27],[40.94,-73.68]]);
