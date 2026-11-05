@@ -831,3 +831,21 @@
 /* Long FAR comparisons must remain usable on short mobile viewports. */
 #map .parcel-preview-card{max-height:min(65dvh,510px);overflow-y:auto;overscroll-behavior:contain}
 @media(max-width:740px){#map .parcel-preview-card{max-height:min(55dvh,430px)}}
+
+/* Build 42: desktop map/sidebar toggle. Mobile bottom sheet is unaffected. */
+@media(min-width:741px){
+ .desktop-menu-toggle{
+  position:absolute;top:12px;right:12px;z-index:850;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  height:39px;min-width:111px;padding:7px 11px;
+  border:1px solid #d5c9df;border-radius:6px;background:#fff;
+  color:#563287;font-size:12px;font-weight:750;
+  box-shadow:0 2px 8px #0002;
+ }
+ .desktop-menu-toggle:hover{background:#f8f3fb}
+ .desktop-menu-toggle:focus-visible{outline:2px solid #684092;outline-offset:2px}
+ #desktop-menu-icon{font-size:16px;line-height:1}
+ body.desktop-menu-hidden .side-panel{display:none!important}
+ body.desktop-menu-hidden .map-wrap{flex:1 1 100%;min-width:0}
+}
+@media(max-width:740px){.desktop-menu-toggle{display:none!important}}
