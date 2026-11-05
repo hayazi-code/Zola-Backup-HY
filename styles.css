@@ -827,3 +827,7 @@
 #map .parcel-preview-source{font-size:10px;line-height:1.4;margin:0 0 11px;color:#756b7a}
 #map .parcel-preview-source a{font-size:10px;text-decoration:underline;color:#563287}
 #map .parcel-preview-grid{gap:7px 10px}
+
+/* Long FAR comparisons must remain usable on short mobile viewports. */
+#map .parcel-preview-card{max-height:min(65dvh,510px);overflow-y:auto;overscroll-behavior:contain}
+@media(max-width:740px){#map .parcel-preview-card{max-height:min(55dvh,430px)}}
