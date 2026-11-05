@@ -219,3 +219,9 @@ The preview cautions that qualifying affordable FAR is conditional and not proof
 ## Build 42: restore desktop hide/show sidebar
 
 A compact **Hide menu / Show menu** control appears at the top-right of the map when the viewport is wider than 740 px. Toggling hides the right sidebar without removing its DOM or resetting selected layers or search inputs; Leaflet's map size is recalculated after layout changes. **View full details** on a parcel automatically reopens the desktop sidebar if necessary. The existing mobile bottom-sheet behavior is unchanged, with the desktop control hidden at mobile widths. Screen-reader labels, expansion state and hidden-sidebar focus prevention are maintained. The Build 41 MapPLUTO FAR comparison remains intact. Static JS syntax and integration checks passed; live desktop rendering remains unverified.
+
+## Build 44: independently initialized desktop menu toggle
+
+Fixes the visible but unresponsive **Hide menu** button from Build 43. The desktop sidebar's control now lives in `desktop-menu.js`, initialized on DOM readiness independently of the main Leaflet application. The previous map-startup-dependent listener was removed, preventing double toggles and ensuring the button still works if unrelated GIS or map initialization fails. Closing the panel explicitly toggles `#mobile-sheet.hidden` and a CSS body class; the right-side panel remains in the DOM with its settings intact. Opening it restores the panel and focusability. A window resize event is dispatched after either layout change so Leaflet can recalculate dimensions; parcel **View full details** still reopens the desktop sidebar. The existing mobile bottom sheet is unchanged.
+
+**Validation:** JavaScript syntax, build references, CSS hidden state, and simulated click events (hide, show, and auto-show) passed. The live deployed interface has not been visually tested in a desktop browser.
