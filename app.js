@@ -76,7 +76,7 @@ const layerStyles={
  special:()=>({color:'#544091',weight:2,fillColor:'#c8b9e8',fillOpacity:.08,dashArray:'6 4'}),
  subdistrict:()=>({color:'#8e55b1',weight:1.4,fillColor:'#d7b5e8',fillOpacity:.08,dashArray:'2 5'}),
  mih:()=>({color:'#2d997e',weight:2.2,fillColor:'#80d8ba',fillOpacity:.13,dashArray:'6 3'}),
- lots:f=>({color:LOT_OUTLINE_COLORS[lotOutlineSettings.color],weight:lotOutlineSettings.weight,opacity:lotOutlineSettings.visible?1:0,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse??'').padStart(2,'0')]||UNKNOWN_LANDUSE_COLOR):'#fff',fillOpacity:flags.landuse?layerFillOpacity.landuse:0})
+ lots:f=>({color:LOT_OUTLINE_COLORS[lotOutlineSettings.color],weight:lotOutlineSettings.weight,opacity:(flags.lots||flags.landuse)&&lotOutlineSettings.visible?1:0,fillColor:flags.landuse?(LOT_COLORS[String(f.properties?.LandUse??'').padStart(2,'0')]||UNKNOWN_LANDUSE_COLOR):'#fff',fillOpacity:flags.landuse?layerFillOpacity.landuse:0})
 };
 const titles={zoning:'Zoning district',commercial:'Commercial overlay',special:'Special district',subdistrict:'Special subdistrict',mih:'Mandatory Inclusionary Housing',lots:'Tax lot'};
 const featureLabel=(key,p)=>({
@@ -98,7 +98,9 @@ function createLayers(){
  }
  // Ordering matters: zoning below thematic overlays and selectable lot outlines.
  for(const key of Object.keys(URLS))layerGroups[key].addTo(map);
- inspectLayer=L.geoJSON(null,{style:{color:'#4b277e',weight:3,fillColor:'#8b6bb7',fillOpacity:.16},interactive:false}).addTo(map);
+ map.createPane('spatialAnalysisPane');map.getPane('spatialAnalysisPane').style.zIndex='425';map.getPane('spatialAnalysisPane').style.pointerEvents='none';
+ map.createPane('analysisHighlightPane');map.getPane('analysisHighlightPane').style.zIndex='445';map.getPane('analysisHighlightPane').style.pointerEvents='none';
+ inspectLayer=L.geoJSON(null,{pane:'analysisHighlightPane',style:{color:'#4b277e',weight:3,fillColor:'#8b6bb7',fillOpacity:.16},interactive:false}).addTo(map);
 }
 // Update rendered feature styles in place: no network fetch, geometry replacement or click-handler change.
 window.ZOLA_SET_FILL_OPACITY=(type,percent)=>{
@@ -122,12 +124,12 @@ window.ZOLA_SET_LOT_OUTLINE=(patch={})=>{
 };
 function bringHighlights(){layerGroups.lots.bringToFront();inspectLayer.bringToFront()}
 window.ZOLA_RESTORE_PARCEL_HIGHLIGHTS=()=>bringHighlights();
-function checkLayer(key){return key==='lots'?(flags.lots||flags.landuse):flags[key]}
+function checkLayer(key){return key==='lots'?(flags.lots||flags.landuse||Boolean(window.ZOLA_SPATIAL_ACTIVE?.())):flags[key]}
 async function refreshLayer(key){
  const group=layerGroups[key],prior=requests[key];if(prior)prior.abort();
  const ac=new AbortController();requests[key]=ac;
- if(!checkLayer(key)){group.clearLayers();signalLight(key,'Off');return}
- if(map.getZoom()<BASE[key]){group.clearLayers();signalLight(key,'Zoom in');return}
+ if(!checkLayer(key)){group.clearLayers();if(key==='lots')window.ZOLA_SPATIAL_ON_LOTS?.([],false);signalLight(key,'Off');return}
+ if(map.getZoom()<BASE[key]){group.clearLayers();if(key==='lots')window.ZOLA_SPATIAL_ON_LOTS?.([],false);signalLight(key,'Zoom in');return}
  signalLight(key,'Loading…');
  const query={...gisParams(extent(),'esriGeometryEnvelope'),outFields:FIELDS[key],resultRecordCount:2000,resultOffset:0};
  const features=[];
@@ -143,14 +145,14 @@ async function refreshLayer(key){
   if(ac.signal.aborted)return;
   const visible=features.filter(f=>!window.ZOLA_VISIBLE_FEATURE||window.ZOLA_VISIBLE_FEATURE(key,f));
   group.clearLayers();group.addData({type:'FeatureCollection',features:visible});
-  if(key==='lots')group.setStyle(layerStyles.lots);
+  if(key==='lots'){group.setStyle(layerStyles.lots);window.ZOLA_SPATIAL_ON_LOTS?.(visible,features.length>=pages*2000)}
   bringHighlights();
   window.ZOLA_BRING_TRANSIT_FORWARD?.();
   const clipped=features.length>=pages*2000;
   signalLight(key,clipped?'Zoom in for complete coverage':FORMAT.format(visible.length)+' shown',clipped?'warn':'good');
  }catch(e){
   if(e.name==='AbortError')return;
-  group.clearLayers();signalLight(key,'Unavailable','error');
+  group.clearLayers();if(key==='lots')window.ZOLA_SPATIAL_ON_LOTS?.([],false,'Parcel data unavailable');signalLight(key,'Unavailable','error');
   notice(titles[key]+' layer: '+e.message,'error');
  }
 }
@@ -546,7 +548,7 @@ function start(){
   attribution:'&copy; OpenStreetMap contributors · NYC DCP public GIS data',
   maxNativeZoom:19,maxZoom:20,updateWhenIdle:true
  }).addTo(map);
- createLayers();window.setupLayerExplorer?.(map);bindControls();bindOrientationControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
+ createLayers();window.setupSpatialAnalysis?.(map,layerGroups);window.setupLayerExplorer?.(map);bindControls();bindOrientationControls();setupLegendToggle();window.ZOLA_MOBILE_INSTALL?.(map);updateMapLegend();
  map.on('moveend',refreshMap);
  map.on('click',e=>inspectAt(e.latlng));
  const url=new URL(location.href),bbl=url.searchParams.get('bbl');if(bbl)lookupBBL(bbl);
